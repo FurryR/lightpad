@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <array>
 
-#include "./screen.h"
+#include "../screen.h"
 namespace TomorrowNightBrightCpp {
 typedef struct ColorText {
   std::string prefix;
