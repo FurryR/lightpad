@@ -1,10 +1,10 @@
-#ifndef _TOMORROW_NIGHT_BRIGHT_CPP_H
-#define _TOMORROW_NIGHT_BRIGHT_CPP_H
+#ifndef _TOMORROW_NIGHT_BRIGHT_JS_H
+#define _TOMORROW_NIGHT_BRIGHT_JS_H
 #include <algorithm>
 #include <array>
 
 #include "../screen.h"
-namespace TomorrowNightBrightCpp {
+namespace TomorrowNightBrightJs {
 typedef struct ColorText {
   std::string prefix;
   std::string content;
@@ -24,12 +24,12 @@ typedef enum TokenType {
   Operator = 2,
   Identifier = 3,
   Number = 4,
-  PreProcessor = 5,
-  String = 6,
-  LineComment = 7,
-  Literal = 8
+  String = 5,
+  LineComment = 6,
+  Literal = 7
 } TokenType;
 bool isnum(const std::string& p) {
+  if (p == "Infinity" || p == "NaN") return true;
   try {
     for (size_t i = 0; i < p.length(); i++) {
       if ((p[i] >= L'0' && p[i] <= L'9') || p[i] == L'.' || p[i] == L'e')
@@ -56,8 +56,6 @@ std::string _render_color(TokenType type) {
       return "\033[37m";  // 普通标识符
     case Number:
       return "\033[33m";  // 数字
-    case PreProcessor:
-      return "\033[35m";  //预处理器
     case String:
       return "\033[32m";  // 字符串
     case LineComment:
@@ -97,57 +95,12 @@ void _transfer(wchar_t i, size_t& z, size_t& a, size_t& j) {
   else if ((i == L')' || i == L'}' || i == L']') && a == 0)
     j--;
 }
-std::array<std::string, 51> keyword = {"bool",
-                                       "short",
-                                       "int",
-                                       "long",
-                                       "float",
-                                       "double",
-                                       "class",
-                                       "enum",
-                                       "struct",
-                                       "union",
-                                       "signed",
-                                       "unsigned",
-                                       "typedef",
-                                       "const",
-                                       "volatile",
-                                       "static",
-                                       "extern",
-                                       "noexcept",
-                                       "constexpr",
-                                       "void",
-                                       "typename",
-                                       "char",
-                                       "break",
-                                       "continue",
-                                       "for",
-                                       "if",
-                                       "else",
-                                       "while",
-                                       "do",
-                                       "switch",
-                                       "case",
-                                       "default",
-                                       "try",
-                                       "catch",
-                                       "throw",
-                                       "template",
-                                       "using",
-                                       "return",
-                                       "namespace",
-                                       "public",
-                                       "protected",
-                                       "private",
-                                       "new",
-                                       "static_assert",
-                                       "delete",
-                                       "sizeof",
-                                       "decltype",
-                                       "const_cast",
-                                       "static_cast",
-                                       "dynamic_cast",
-                                       "reinterpret_cast"};
+std::array<std::string, 35> keyword = {
+    "this",  "function", "class", "yield",  "async",    "await",      "new",
+    "super", "delete",   "void",  "typeof", "in",       "instanceof", "import",
+    "break", "continue", "if",    "else",   "switch",   "case",       "default",
+    "throw", "try",      "catch", "var",    "let",      "const",      "return",
+    "do",    "while",    "of",    "export", "debugger", "from",       "as"};
 ColorText _get_colortext(const std::string& tmp) {
   if (std::find(keyword.cbegin(), keyword.cend(), tmp) != keyword.cend()) {
     return ColorText(tmp, _render_color(Keyword));
@@ -185,11 +138,6 @@ std::vector<ColorText> _render_one(const std::string& text) {
     if (tmp == "//" && a == 0) {
       ret.push_back(
           ColorText(tmp + text.substr(i), _render_color(LineComment)));
-      tmp = "";
-      break;
-    } else if (tmp == "#" && a == 0) {
-      ret.push_back(
-          ColorText(tmp + text.substr(i), _render_color(PreProcessor)));
       tmp = "";
       break;
     } else if (std::find(separator.cbegin(), separator.cend(), text[i]) !=
@@ -233,5 +181,5 @@ std::vector<std::vector<Character>> render(
   }
   return ret;
 }
-}  // namespace TomorrowNightBrightCpp
+}  // namespace TomorrowNightBrightJs
 #endif

@@ -2,6 +2,7 @@
 #include <functional>
 
 #include "./render/tomorrow-night-bright-cpp.h"
+#include "./render/tomorrow-night-bright-js.h"
 #include "./screen.h"
 #include "./utils.h"
 #define TAB_SIZE 2
@@ -188,7 +189,7 @@ typedef struct TextArea {
       }
     }
   }
-  bool process_key(char op) {
+  void process_key(char op) {
     switch (op) {
       case '\e': {
         // Esc, 方向键
@@ -249,7 +250,6 @@ typedef struct TextArea {
         break;
       }
     }
-    return true;
   }
   void process_arrow(char op) {
     switch (op) {
@@ -347,7 +347,7 @@ void main_ui(Screen* screen) {
               ui.update();
               return;
             } else if (cmd == ":version") {
-              ui.show_info("Lightpad 0.0.1 by FurryR");
+              ui.show_info("Lightpad 0.0.2 by FurryR");
               ui.update();
               flag = false;
               break;
@@ -369,6 +369,10 @@ void main_ui(Screen* screen) {
   }
 }
 int main() {
+  termios tm;
+  tcgetattr(STDIN_FILENO, &tm);
+  tm.c_lflag &= ~ECHO;
+  tcsetattr(STDIN_FILENO, TCSANOW, &tm);
   // std::cout.sync_with_stdio(false);
   Screen screen = Screen(getsize());
   main_ui(&screen);
