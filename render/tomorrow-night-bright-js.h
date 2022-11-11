@@ -101,12 +101,16 @@ std::array<std::string, 35> keyword = {
     "break", "continue", "if",    "else",   "switch",   "case",       "default",
     "throw", "try",      "catch", "var",    "let",      "const",      "return",
     "do",    "while",    "of",    "export", "debugger", "from",       "as"};
+std::array<std::string, 4> literal = {
+  "true", "false", "undefined", "null"
+};
 ColorText _get_colortext(const std::string& tmp) {
   if (std::find(keyword.cbegin(), keyword.cend(), tmp) != keyword.cend()) {
     return ColorText(tmp, _render_color(Keyword));
   } else if (isnum(tmp)) {
     return ColorText(tmp, _render_color(Number));
-  } else if (tmp == "true" || tmp == "false") {
+  } else if (std::find(literal.cbegin(), literal.cend(), tmp) !=
+             literal.cend()) {
     return ColorText(tmp, _render_color(Literal));
   } else if (isIdentifier(tmp)) {
     return ColorText(tmp, _render_color(Identifier));
