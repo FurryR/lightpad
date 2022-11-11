@@ -10,26 +10,23 @@ typedef struct ColorText {
   std::string content;
   std::vector<Character> output() const {
     std::vector<Character> ret = std::vector<Character>(content.length());
-    for (size_t i = 0; i < content.length(); i++) {
-      if (prefix != "")
-        ret[i] = Character(content[i], prefix);
-      else
-        ret[i] = Character(content[i]);
-    }
+    for (size_t i = 0; i < content.length(); i++)
+      ret[i] = Character(content[i], prefix);
     return ret;
   }
   ColorText() {}
   ColorText(const std::string& content, const std::string& prefix)
-      : content(content), prefix(prefix) {}
+      : prefix(prefix), content(content) {}
 } ColorText;
 typedef enum TokenType {
+  None = 0,
   Keyword = 1,
-  Operator = 4,
-  Identifier = 5,
-  Number = 6,
-  Preprocessor = 7,
-  String = 8,
-  LineComment = 10,
+  Operator = 2,
+  Identifier = 3,
+  Number = 4,
+  Preprocessor = 5,
+  String = 6,
+  LineComment = 7,
 } TokenType;
 bool isnum(const std::string& p) {
   try {
@@ -65,7 +62,7 @@ std::string _render_color(TokenType type) {
     case LineComment:
       return "\e[38;5;236m";  //行注释
     default:
-      return "";
+      return "\033[37m";
   }
 }
 bool isIdentifier(const std::string& x) {
@@ -156,13 +153,14 @@ ColorText _get_colortext(const std::string& tmp) {
   } else if (isnum(tmp)) {
     return ColorText(tmp, _render_color(Number));
   } else {
-    return ColorText(tmp, "");
+    return ColorText(tmp, _render_color(None));
   }
 }
-std::array<char, 13> separator = {' ', ';', ',', '{',  '}',  '[',
-                                  ']', '(', ')', '\"', '\'', ':', '.'};
+std::array<char, 13> separator = {' ', ';', ',',  '{',  '}', '[', ']',
+                                  '(', ')', '\"', '\'', ':', '.'};
 
-std::array<char, 13> op = {'+', '-', '*', '/', '>', '<', '=', '!', '&', '|', '%', '^', '~'};
+std::array<char, 13> op = {'+', '-', '*', '/', '>', '<', '=',
+                           '!', '&', '|', '%', '^', '~'};
 std::vector<ColorText> _render_one(const std::string& text) {
   std::string tmp;
   std::vector<ColorText> ret;
@@ -206,7 +204,7 @@ std::vector<ColorText> _render_one(const std::string& text) {
     } else
       tmp += text[i];
   }
-  if (tmp != "") ret.push_back(ColorText(tmp, ""));
+  if (tmp != "") ret.push_back(ColorText(tmp, _render_color(None)));
   return ret;
 }
 std::vector<std::vector<ColorText>> _render(
