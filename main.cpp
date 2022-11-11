@@ -139,6 +139,12 @@ typedef struct TextArea {
         dirty(true),
         renderer(renderer),
         mode(Normal) {}
+  void switch_renderer(
+      const std::function<std::vector<std::vector<Character>>(
+          const std::vector<std::string>&)>& new_renderer) {
+            renderer = new_renderer;
+            dirty = true;
+          }
   void render(UI* ui) {
     ui->clear();
     if (dirty) {
@@ -363,26 +369,21 @@ void main_ui(Screen* screen) {
               break;
             } else if (cmd == ":cpp_render") {
               // use tomorrow-night-bright-cpp
-              textarea.renderer = TomorrowNightBrightCpp::render;
-              textarea.dirty =
-                  true;  // force rendering after switching renderer
+              textarea.switch_renderer(TomorrowNightBrightCpp::render);
               ui.show_info("Switch to TomorrowNightBrightCpp::render");
               ui.update();
               flag = false;
               break;
             } else if (cmd == ":plaintext_render") {
               // use plaintext
-              textarea.renderer = PlainText::render;
-              textarea.dirty =
-                  true;  // force rendering after switching renderer
+              textarea.switch_renderer(PlainText::render);
               ui.show_info("Switch to PlainText::render");
               ui.update();
               flag = false;
               break;
             } else if (cmd == ":js_render") {
               // use tomorrow-night-bright-js
-              textarea.renderer = TomorrowNightBrightJs::render;
-              textarea.dirty = true;
+              textarea.switch_renderer(TomorrowNightBrightJs::render);
               ui.show_info("Switch to TomorrowNightBrightJs::render");
               ui.update();
               flag = false;
