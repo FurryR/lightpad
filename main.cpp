@@ -136,9 +136,9 @@ typedef struct TextArea {
       : cur_pos(Coord(0, 0)),
         x_before(0),
         text(text),
+        dirty(true),
         renderer(renderer),
-        mode(Normal),
-        dirty(true) {}
+        mode(Normal) {}
   void render(UI* ui) {
     ui->clear();
     if (dirty) {
@@ -364,7 +364,8 @@ void main_ui(Screen* screen) {
             } else if (cmd == ":cpp_render") {
               // use tomorrow-night-bright-cpp
               textarea.renderer = TomorrowNightBrightCpp::render;
-              textarea.dirty = true; // force rendering after switching renderer
+              textarea.dirty =
+                  true;  // force rendering after switching renderer
               ui.show_info("Switch to TomorrowNightBrightCpp::render");
               ui.update();
               flag = false;
