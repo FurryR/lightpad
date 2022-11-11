@@ -25,7 +25,7 @@ typedef enum TokenType {
   Identifier = 3,
   Number = 4,
   String = 5,
-  LineComment = 6,
+  Comment = 6,
   Literal = 7
 } TokenType;
 bool isnum(const std::string& p) {
@@ -58,8 +58,8 @@ std::string _render_color(TokenType type) {
       return "\e[33m";  // 数字
     case String:
       return "\e[32m";  // 字符串
-    case LineComment:
-      return "\e[38;5;242m";  // 行注释
+    case Comment:
+      return "\e[38;5;242m";  // 注释
     case Literal:
       return "\e[34m";  // 常量
     default:
@@ -81,7 +81,7 @@ bool isIdentifier(const std::string& x) {
   }
   return true;
 }
-void _transfer(wchar_t i, size_t& z, size_t& a, size_t& j) {
+void _transfer(wchar_t i, size_t& z, size_t& a) {
   if (i == L'\\')
     z = !z;
   else if (i == L'\"' && !z) {
@@ -90,10 +90,6 @@ void _transfer(wchar_t i, size_t& z, size_t& a, size_t& j) {
     if (a == 0 || a == 2) a = (a == 0 ? 2 : 0);
   } else
     z = false;
-  if ((i == L'(' || i == L'{' || i == L'[') && a == 0)
-    j++;
-  else if ((i == L')' || i == L'}' || i == L']') && a == 0)
-    j--;
 }
 std::array<std::string, 35> keyword = {
     "this",  "function", "class", "yield",  "async",    "await",      "new",
@@ -123,36 +119,53 @@ std::array<char, 13> separator = {' ', ';', ',',  '{',  '}', '[', ']',
 
 std::array<char, 13> op = {'+', '-', '*', '/', '>', '<', '=',
                            '!', '&', '|', '%', '^', '~'};
-std::vector<ColorText> _render_one(const std::string& text) {
+std::vector<ColorText> _render_one(const std::string& text, bool* status) {
   std::string tmp;
   std::vector<ColorText> ret;
-  for (size_t i = 0, a = 0, j = 0, z = 0; i < text.length(); i++) {
-    _transfer(text[i], z, a, j);
+  for (size_t i = 0, a = 0, z = 0; i < text.length(); i++) {
+    if (*status) {
+      for (; i < text.length() &&
+             (tmp.length() < 2 || tmp.substr(tmp.length() - 2, 2) != "*/");
+           i++) {
+        tmp += text[i];
+      }
+      if (i == text.length() &&
+          (tmp.length() < 2 || tmp.substr(tmp.length() - 2, 2) != "*/"))
+        break;
+      *status = false;
+      ret.push_back(ColorText(tmp, _render_color(Comment)));
+      tmp = "";
+    }
+    _transfer(text[i], z, a);
     if (a == 1 || a == 2) {
       tmp += text[i];
       i++;
-      while (i < text.length() && a != 0) {
-        _transfer(text[i], z, a, j);
+      for (; i < text.length() && a != 0; i++) {
+        _transfer(text[i], z, a);
         tmp += text[i];
-        i++;
       }
       ret.push_back(ColorText(tmp, _render_color(String)));
       tmp = "";
     }
-    if (tmp == "//" && a == 0) {
+    if (tmp + text[i] == "//" && a == 0) {
       ret.push_back(
-          ColorText(tmp + text.substr(i), _render_color(LineComment)));
+          ColorText(tmp + text.substr(i), _render_color(Comment)));
       tmp = "";
       break;
+    } else if (tmp + text[i] == "/*" && a == 0) {
+      *status = true;
+      tmp += text[i];
+      continue;
     } else if (std::find(separator.cbegin(), separator.cend(), text[i]) !=
                separator.cend()) {
       ret.push_back(_get_colortext(tmp));
       tmp = "";
       if (text[i] != '\"' && text[i] != '\'')
-        ret.push_back(ColorText(std::string(1, text[i]), ""));
+        ret.push_back(ColorText(std::string(1, text[i]), _render_color(None)));
     } else if (std::find(op.cbegin(), op.cend(), text[i]) != op.cend() &&
                (text[i] != '/' ||
-                !((i + 1 < text.length() && text[i + 1] == '/') ||
+                !((i + 1 < text.length() &&
+                   (text[i + 1] == '/' || text[i + 1] == '*')) ||
                   (i >= 1 && text[i - 1] == '/')))) {
       ret.push_back(_get_colortext(tmp));
       ret.push_back(
@@ -161,14 +174,20 @@ std::vector<ColorText> _render_one(const std::string& text) {
     } else
       tmp += text[i];
   }
-  if (tmp != "") ret.push_back(ColorText(tmp, _render_color(None)));
+  if (tmp != "") {
+    if (*status)
+      ret.push_back(ColorText(tmp, _render_color(Comment)));
+    else
+      ret.push_back(ColorText(tmp, _render_color(None)));
+  }
   return ret;
 }
 std::vector<std::vector<ColorText>> _render(
     const std::vector<std::string>& text) {
   std::vector<std::vector<ColorText>> ret(text.size());
+  bool flag = false;
   for (size_t i = 0; i < text.size(); i++) {
-    ret[i] = _render_one(text[i]);
+    ret[i] = _render_one(text[i], &flag);
   }
   return ret;
 }
