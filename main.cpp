@@ -374,11 +374,11 @@ void main_ui(Screen* screen) {
               textarea.renderer = PlainText::render;
               textarea.dirty =
                   true;  // force rendering after switching renderer
-              ui.show_info("Switch to TomorrowNightBrightCpp::render");
+              ui.show_info("Switch to PlainText::render");
               ui.update();
               flag = false;
               break;
-            } else {
+            } else if (cmd == ":js_render") {
               // use tomorrow-night-bright-js
               textarea.renderer = TomorrowNightBrightJs::render;
               textarea.dirty = true;
