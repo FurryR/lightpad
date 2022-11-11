@@ -364,6 +364,7 @@ void main_ui(Screen* screen) {
             } else if (cmd == ":cpp_render") {
               // use tomorrow-night-bright-cpp
               textarea.renderer = TomorrowNightBrightCpp::render;
+              textarea.dirty = true; // force rendering after switching renderer
               ui.show_info("Switch to TomorrowNightBrightCpp::render");
               ui.update();
               flag = false;
@@ -371,6 +372,7 @@ void main_ui(Screen* screen) {
             } else {
               // use tomorrow-night-bright-js
               textarea.renderer = TomorrowNightBrightJs::render;
+              textarea.dirty = true;
               ui.show_info("Switch to TomorrowNightBrightJs::render");
               ui.update();
               flag = false;
