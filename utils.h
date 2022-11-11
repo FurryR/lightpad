@@ -49,7 +49,7 @@ Coord getsize() {
   tm = tm_old;
   tm.c_lflag &= ~(ECHO | ICANON);
   tcsetattr(0, TCSANOW, &tm);
-  std::cout << "\033[s\033[9999;9999H\033[6n\033[u";
+  std::cout << "\e[s\e[9999;9999H\e[6n\e[u";
   getchar();
   getchar();
   for (char ch; (ch = getchar()) != ';'; ret.y = ret.y * 10 + (ch - '0'))
@@ -63,7 +63,7 @@ Coord getsize() {
 #include <conio.h>
 Coord getsize() {
   Coord ret = Coord(0, 0);
-  std::cout << "\033[s\033[9999;9999H\033[6n\033[u";
+  std::cout << "\e[s\e[9999;9999H\e[6n\e[u";
   getch();
   getch();
   for (char ch; (ch = getch()) != ';'; ret.y = ret.y * 10 + (ch - '0'))
