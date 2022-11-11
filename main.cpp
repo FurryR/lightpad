@@ -124,6 +124,8 @@ typedef struct TextArea {
   Coord cur_pos;
   size_t x_before;
   std::vector<std::string> text;
+  std::vector<std::vector<Character>> cache;
+  bool dirty;
   std::function<std::vector<std::vector<Character>>(
       const std::vector<std::string>&)>
       renderer;
@@ -135,11 +137,16 @@ typedef struct TextArea {
         x_before(0),
         text(text),
         renderer(renderer),
-        mode(Normal) {}
+        mode(Normal),
+        dirty(true) {}
   void render(UI* ui) {
     ui->clear();
+    if (dirty) {
+      cache = renderer(text);
+      dirty = false;
+    }
     ui->show_text(
-        renderer(text), cur_pos,
+        cache, cur_pos,
         (size_t)std::max<int>({0, int(cur_pos.x - ui->size().x)}),
         (size_t)std::max<int>({0, int(cur_pos.y - ui->size().y + 3)}));
     ui->show_bar(mode2str(mode), "[unnamed]",
@@ -157,6 +164,7 @@ typedef struct TextArea {
         text[cur_pos.y] = text[cur_pos.y].substr(0, cur_pos.x);
         cur_pos.y++;
         cur_pos.x = 0;
+        dirty = true;
         break;
       }
       case 127: {
@@ -173,6 +181,7 @@ typedef struct TextArea {
                               text[cur_pos.y].substr(cur_pos.x);
             cur_pos.x--;
           }
+          dirty = true;
         }
         break;
       }
@@ -186,6 +195,7 @@ typedef struct TextArea {
           text[cur_pos.y].insert(text[cur_pos.y].begin() + cur_pos.x, op);
           cur_pos.x++;
         }
+        dirty = true;
       }
     }
   }
@@ -312,16 +322,16 @@ void main_ui(Screen* screen) {
   text.push_back("  return 0;");
   text.push_back("}");
   UI ui = UI(screen);
-  TextArea a = TextArea(TomorrowNightBrightCpp::render, text);
+  TextArea textarea = TextArea(TomorrowNightBrightCpp::render, text);
   int cmd = 0;
   while (1) {
-    a.render(&ui);
+    textarea.render(&ui);
     while (1) {
       bool flag = true;
       cmd = getch();
       switch (cmd) {
         case ':': {
-          if (a.mode == Normal) {
+          if (textarea.mode == Normal) {
             // 命令系统
             bool execute = true;
             int tmp;
@@ -351,16 +361,30 @@ void main_ui(Screen* screen) {
               ui.update();
               flag = false;
               break;
+            } else if (cmd == ":cpp_render") {
+              // use tomorrow-night-bright-cpp
+              textarea.renderer = TomorrowNightBrightCpp::render;
+              ui.show_info("Switch to TomorrowNightBrightCpp::render");
+              ui.update();
+              flag = false;
+              break;
+            } else {
+              // use tomorrow-night-bright-js
+              textarea.renderer = TomorrowNightBrightJs::render;
+              ui.show_info("Switch to TomorrowNightBrightJs::render");
+              ui.update();
+              flag = false;
+              break;
             }
             ui.show_info("E: Unknown lightpad command");
             ui.update();
             flag = false;
           } else
-            a.process_key(cmd);
+            textarea.process_key(cmd);
           break;
         }
         default: {
-          a.process_key(cmd);
+          textarea.process_key(cmd);
           break;
         }
       }
