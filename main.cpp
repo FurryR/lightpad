@@ -97,7 +97,7 @@ typedef struct UI {
 
 namespace PlainText {
 // 默认的 render。不会给代码上色。
-std::vector<std::vector<Character>> render_plaintext(
+std::vector<std::vector<Character>> render(
     const std::vector<std::string>& str) {
   std::vector<std::vector<Character>> ret;
   for (size_t i = 0; i < str.size(); i++) {
@@ -365,6 +365,15 @@ void main_ui(Screen* screen) {
               // use tomorrow-night-bright-cpp
               textarea.renderer = TomorrowNightBrightCpp::render;
               textarea.dirty = true; // force rendering after switching renderer
+              ui.show_info("Switch to TomorrowNightBrightCpp::render");
+              ui.update();
+              flag = false;
+              break;
+            } else if (cmd == ":plaintext_render") {
+              // use plaintext
+              textarea.renderer = PlainText::render;
+              textarea.dirty =
+                  true;  // force rendering after switching renderer
               ui.show_info("Switch to TomorrowNightBrightCpp::render");
               ui.update();
               flag = false;
