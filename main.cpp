@@ -147,7 +147,7 @@ typedef struct TextArea {
     }
     ui->show_text(
         cache, cur_pos,
-        (size_t)std::max<int>({0, int(cur_pos.x - ui->size().x)}),
+        (size_t)std::max<int>({0, int(cur_pos.x - ui->size().x + 1)}),
         (size_t)std::max<int>({0, int(cur_pos.y - ui->size().y + 3)}));
     ui->show_bar(mode2str(mode), "[unnamed]",
                  std::string("ln: ") + std::to_string(cur_pos.y + 1) + "/" +
