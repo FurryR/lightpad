@@ -53,7 +53,7 @@ typedef class Screen {
       for (size_t x = 0; x < _size.x; x++) {
         if (!(buf[y][x] == history[y][x])) {
           std::cout << "\x1b[0m";
-          if (flag == true) {
+          if (flag) {
             std::cout << "\x1b[" << (y + 1) << ";" << (x + 1) << "H";
             flag = false;
           }

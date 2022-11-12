@@ -354,9 +354,7 @@ void main_ui(Screen* screen) {
               ui.show_info(cmd);
               ui.update();
             }
-            if (execute == false) {
-              break;
-            }
+            if (!execute) break;
             if (cmd == ":q") {
               ui.clear();
               ui.update();
