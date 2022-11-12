@@ -208,7 +208,7 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
     if (*status)
       ret.push_back(ColorText(tmp, _render_color(Comment)));
     else
-      ret.push_back(ColorText(tmp, _render_color(None)));
+      ret.push_back(_get_colortext(tmp));
   }
   return ret;
 }
