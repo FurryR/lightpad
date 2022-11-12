@@ -49,21 +49,21 @@ bool isnum(const std::string& p) {
 std::string _render_color(TokenType type) {
   switch (type) {
     case Keyword:
-      return "\e[35m";  // 关键字
+      return "\x1b[35m";  // 关键字
     case Operator:
-      return "\e[36m";  // 算符
+      return "\x1b[36m";  // 算符
     case Identifier:
-      return "\e[37m";  // 普通标识符
+      return "\x1b[37m";  // 普通标识符
     case Number:
-      return "\e[33m";  // 数字
+      return "\x1b[33m";  // 数字
     case String:
-      return "\e[32m";  // 字符串
+      return "\x1b[32m";  // 字符串
     case Comment:
-      return "\e[38;5;242m";  // 注释
+      return "\x1b[38;5;242m";  // 注释
     case Literal:
-      return "\e[34m";  // 常量
+      return "\x1b[34m";  // 常量
     default:
-      return "\e[37m";
+      return "\x1b[37m";
   }
 }
 bool isIdentifier(const std::string& x) {

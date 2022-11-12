@@ -31,8 +31,8 @@ typedef class Screen {
   std::vector<std::vector<Character>> history;
   // std::vector<std::vector<Character>> history;
   Coord _size;
-  void _init() const { std::cout << "\e[2J\e[1;1H"; }
-  void _clear() const { std::cout << "\e[1;1H"; }
+  void _init() const { std::cout << "\x1b[2J\x1b[1;1H"; }
+  void _clear() const { std::cout << "\x1b[1;1H"; }
   bool _test(const Coord& pos) const noexcept {
     return pos.x < _size.x && pos.y < _size.y;
   }
@@ -52,9 +52,9 @@ typedef class Screen {
     for (size_t y = 0; y < _size.y; y++) {
       for (size_t x = 0; x < _size.x; x++) {
         if (!(buf[y][x] == history[y][x])) {
-          std::cout << "\e[0m";
+          std::cout << "\x1b[0m";
           if (flag == true) {
-            std::cout << "\e[" << (y + 1) << ";" << (x + 1) << "H";
+            std::cout << "\x1b[" << (y + 1) << ";" << (x + 1) << "H";
             flag = false;
           }
           buf[y][x].output();
@@ -64,7 +64,7 @@ typedef class Screen {
         }
       }
     }
-    std::cout << "\e[" << _size.y << ";" << _size.x << "H\e[0m"
+    std::cout << "\x1b[" << _size.y << ";" << _size.x << "H\x1b[0m"
               << std::flush;
   }
   void clear() {

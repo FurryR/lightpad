@@ -49,23 +49,23 @@ bool isnum(const std::string& p) {
 std::string _render_color(TokenType type) {
   switch (type) {
     case Keyword:
-      return "\e[35m";  // 关键字
+      return "\x1b[35m";  // 关键字
     case Operator:
-      return "\e[36m";  // 算符
+      return "\x1b[36m";  // 算符
     case Identifier:
-      return "\e[37m";  // 普通标识符
+      return "\x1b[37m";  // 普通标识符
     case Number:
-      return "\e[33m";  // 数字
+      return "\x1b[33m";  // 数字
     case PreProcessor:
-      return "\e[35m";  //预处理器
+      return "\x1b[35m";  //预处理器
     case String:
-      return "\e[32m";  // 字符串
+      return "\x1b[32m";  // 字符串
     case Comment:
-      return "\e[38;5;242m";  // 注释
+      return "\x1b[38;5;242m";  // 注释
     case Literal:
-      return "\e[34m";  // 常量
+      return "\x1b[34m";  // 常量
     default:
-      return "\e[37m";
+      return "\x1b[37m";
   }
 }
 bool isIdentifier(const std::string& x) {
@@ -158,8 +158,7 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
       tmp = "";
     }
     if (tmp + text[i] == "//" && a == 0) {
-      ret.push_back(
-          ColorText(tmp + text.substr(i), _render_color(Comment)));
+      ret.push_back(ColorText(tmp + text.substr(i), _render_color(Comment)));
       tmp = "";
       break;
     } else if (tmp + text[i] == "/*" && a == 0) {
@@ -167,8 +166,24 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
       tmp += text[i];
       continue;
     } else if (tmp == "#" && a == 0) {
-      ret.push_back(
-          ColorText(tmp + text.substr(i), _render_color(PreProcessor)));
+      // ret.push_back(
+      //     ColorText(tmp + text.substr(i), _render_color(PreProcessor)));
+      // tmp = "";
+      for (; i < text.length() &&
+             (tmp.length() < 2 || tmp.substr(tmp.length() - 2, 2) != "//");
+           i++) {
+        tmp += text[i];
+      }
+      if (i == text.length() &&
+          (tmp.length() < 2 || tmp.substr(tmp.length() - 2, 2) != "//")) {
+        ret.push_back(ColorText(tmp, _render_color(PreProcessor)));
+        tmp = "";
+        break;
+      }
+      i -= 2;
+      ret.push_back(ColorText(tmp.substr(0, tmp.length() - 2),
+                              _render_color(PreProcessor)));
+      ret.push_back(ColorText(text.substr(i), _render_color(Comment)));
       tmp = "";
       break;
     } else if (std::find(separator.cbegin(), separator.cend(), text[i]) !=

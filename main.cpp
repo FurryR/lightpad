@@ -29,7 +29,7 @@ typedef struct UI {
               screen->set(
                   Coord(x, y),
                   Character(text[vec_index][str_index].content,
-                            text[vec_index][str_index].prefix + "\e[47m"));
+                            text[vec_index][str_index].prefix + "\x1b[47m"));
             } else {
               screen->set(Coord(x, y), text[vec_index][str_index]);
             }
@@ -38,14 +38,14 @@ typedef struct UI {
             break;
         }
         if (vec_index == cursor.y && str_index == cursor.x) {
-          screen->set(Coord(x, y), Character(0, "\e[47m"));
+          screen->set(Coord(x, y), Character(0, "\x1b[47m"));
         }
       } else
         break;
       vec_index++;
     }
     if (vec_index == cursor.y) {
-      screen->set(Coord(0, y), Character(0, "\e[47m"));
+      screen->set(Coord(0, y), Character(0, "\x1b[47m"));
     }
   }
   void show_bar(const Modestr& mode, const std::string& hint,
@@ -63,23 +63,23 @@ typedef struct UI {
     for (size_t i = mode.mode.length() + 2; i < screen->size().x; i++) {
       if (idx < hint.length() && i > mode.mode.length() + 2) {
         screen->set(Coord(i, screen->size().y - 2),
-                    Character(hint[idx], "\e[97;44m"));
+                    Character(hint[idx], "\x1b[97;44m"));
         idx++;
       } else {
-        screen->set(Coord(i, screen->size().y - 2), Character(0, "\e[44m"));
+        screen->set(Coord(i, screen->size().y - 2), Character(0, "\x1b[44m"));
       }
     }
     // 右侧
     screen->set(Coord(screen->size().x - 1, screen->size().y - 2),
-                Character(0, "\e[43m"));
+                Character(0, "\x1b[43m"));
     for (size_t i = 0; i < back_str.length(); i++) {
       screen->set(Coord(screen->size().x - (back_str.length() - i) - 1,
                         screen->size().y - 2),
-                  Character(back_str[i], "\e[30;43m"));
+                  Character(back_str[i], "\x1b[30;43m"));
     }
     screen->set(
         Coord(screen->size().x - back_str.length() - 2, screen->size().y - 2),
-        Character(0, "\e[43m"));
+        Character(0, "\x1b[43m"));
   }
   void show_info(const std::string& info) const {
     for (size_t x = 0; x < screen->size().x; x++) {
@@ -114,9 +114,9 @@ typedef enum Mode { Normal = 0, Insert = 1 } Mode;
 UI::Modestr mode2str(Mode mode) {
   switch (mode) {
     case Normal:
-      return UI::Modestr("NORMAL", "\e[42m\e[30m");
+      return UI::Modestr("NORMAL", "\x1b[42m\x1b[30m");
     case Insert:
-      return UI::Modestr("INSERT", "\e[43m\e[30m");
+      return UI::Modestr("INSERT", "\x1b[43m\x1b[30m");
   }
   return UI::Modestr("UNKNOWN", "");
 }
@@ -139,12 +139,11 @@ typedef struct TextArea {
         dirty(true),
         renderer(renderer),
         mode(Normal) {}
-  void switch_renderer(
-      const std::function<std::vector<std::vector<Character>>(
-          const std::vector<std::string>&)>& new_renderer) {
-            renderer = new_renderer;
-            dirty = true;
-          }
+  void switch_renderer(const std::function<std::vector<std::vector<Character>>(
+                           const std::vector<std::string>&)>& new_renderer) {
+    renderer = new_renderer;
+    dirty = true;
+  }
   void render(UI* ui) {
     ui->clear();
     if (dirty) {
@@ -207,7 +206,7 @@ typedef struct TextArea {
   }
   void process_key(char op) {
     switch (op) {
-      case '\e': {
+      case '\x1b': {
         // Esc, 方向键
         if (kbhit() == '[') {
           // 方向键
@@ -322,7 +321,7 @@ typedef struct TextArea {
 void main_ui(Screen* screen) {
   std::vector<std::string> text;
   text.push_back("#include <iostream>");
-  text.push_back("// An example c++ program rendered by lightpad-cpprender.");
+  text.push_back("// This is Lightpad Dev.");
   text.push_back("int main() {");
   text.push_back("  std::cout << \"Hello World!\\n\" << std::endl;");
   text.push_back("  return 0;");
@@ -347,7 +346,7 @@ void main_ui(Screen* screen) {
             while ((tmp = getch()) != '\n') {
               if (tmp == 127) {
                 if (cmd.length() > 1) cmd.pop_back();
-              } else if (tmp == '\e') {
+              } else if (tmp == '\x1b') {
                 execute = false;
                 break;
               } else

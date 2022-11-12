@@ -1,6 +1,7 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 #include <iostream>
+
 #include "./screen.h"
 
 #ifndef _WIN32
@@ -41,29 +42,12 @@ int getch() {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   return ch;
 }
-#include <termios.h>
-Coord getsize() {
-  Coord ret = Coord(0, 0);
-  termios tm, tm_old;
-  tcgetattr(0, &tm_old);
-  tm = tm_old;
-  tm.c_lflag &= ~(ECHO | ICANON);
-  tcsetattr(0, TCSANOW, &tm);
-  std::cout << "\e[s\e[9999;9999H\e[6n\e[u";
-  getchar();
-  getchar();
-  for (char ch; (ch = getchar()) != ';'; ret.y = ret.y * 10 + (ch - '0'))
-    ;
-  for (char ch; (ch = getchar()) != 'R'; ret.x = ret.x * 10 + (ch - '0'))
-    ;
-  tcsetattr(0, TCSANOW, &tm_old);
-  return ret;
-}
 #else
 #include <conio.h>
+#endif
 Coord getsize() {
   Coord ret = Coord(0, 0);
-  std::cout << "\e[s\e[9999;9999H\e[6n\e[u";
+  std::cout << "\x1b[s\x1b[9999;9999H\x1b[6n\x1b[u";
   getch();
   getch();
   for (char ch; (ch = getch()) != ';'; ret.y = ret.y * 10 + (ch - '0'))
@@ -72,5 +56,4 @@ Coord getsize() {
     ;
   return ret;
 }
-#endif
 #endif
