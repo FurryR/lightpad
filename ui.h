@@ -281,6 +281,7 @@ typedef class TextArea {
                     text[cur_pos.y].substr(cur_pos.x));
         text[cur_pos.y] = text[cur_pos.y].substr(0, cur_pos.x);
         cur_pos.y++;
+        if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
         cur_pos.x = 0;
         dirty = true;
         break;
@@ -293,6 +294,8 @@ typedef class TextArea {
             text[cur_pos.y - 1] += text[cur_pos.y];
             text.erase(text.cbegin() + cur_pos.y);
             cur_pos.y--;
+            if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
+              yoffset--;
             cur_pos.x = tmp;
           } else {
             text[cur_pos.y] = text[cur_pos.y].substr(0, cur_pos.x - 1) +
