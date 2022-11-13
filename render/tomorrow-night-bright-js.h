@@ -95,13 +95,13 @@ std::array<std::string, 4> literal = {"true", "false", "undefined", "null"};
 ColorText _get_colortext(const std::string& tmp) {
   if (std::find(keyword.cbegin(), keyword.cend(), tmp) != keyword.cend()) {
     return ColorText(tmp, _render_color(Keyword));
-  } else if (isnum(tmp)) {
-    return ColorText(tmp, _render_color(Number));
   } else if (std::find(literal.cbegin(), literal.cend(), tmp) !=
              literal.cend()) {
     return ColorText(tmp, _render_color(Literal));
   } else if (isIdentifier(tmp)) {
     return ColorText(tmp, _render_color(Identifier));
+  } else if (isnum(tmp)) {
+    return ColorText(tmp, _render_color(Number));
   } else {
     return ColorText(tmp, _render_color(None));
   }
