@@ -3,6 +3,7 @@
 #include <fstream>
 #include <functional>
 #include <iterator>
+#include <algorithm>
 
 #include "./screen.h"
 #include "./utils.h"
