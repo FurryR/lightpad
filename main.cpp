@@ -303,7 +303,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
         case 'Z':
         case 'z': {
           // 上一个窗口
-          if (window.size() > 0 || window[window_index].get_mode() == Normal) {
+          if (window.size() > 0 && window[window_index].get_mode() == Normal) {
             if (window_index > 0) window_index--;
           } else if (window.size() != 0)
             window[window_index].process_key(cmd);
@@ -312,7 +312,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
         case 'X':
         case 'x': {
           // 下一个窗口
-          if (window.size() > 0 || window[window_index].get_mode() == Normal) {
+          if (window.size() > 0 && window[window_index].get_mode() == Normal) {
             if (window_index < window.size() - 1) window_index++;
           } else if (window.size() != 0)
             window[window_index].process_key(cmd);
