@@ -29,7 +29,6 @@ typedef struct Character {
 typedef class Screen {
   std::vector<std::vector<Character>> buf;
   std::vector<std::vector<Character>> history;
-  // std::vector<std::vector<Character>> history;
   Coord _size;
   void _init() const { std::cout << "\x1b[2J\x1b[1;1H"; }
   void _clear() const { std::cout << "\x1b[1;1H"; }
@@ -76,7 +75,6 @@ typedef class Screen {
   }
   bool set(const Coord& pos, const Character& chr) {
     if (!_test(pos)) return false;
-    // history[pos] = buf[pos.y][pos.x];
     buf[pos.y][pos.x] = chr;
     return true;
   }
