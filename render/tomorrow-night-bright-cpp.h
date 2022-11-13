@@ -53,7 +53,7 @@ std::string _render_color(TokenType type) {
     case Operator:
       return "\x1b[36m";  // 算符
     case Identifier:
-      return "\x1b[37m";  // 普通标识符
+      return "";  // 普通标识符
     case Number:
       return "\x1b[33m";  // 数字
     case PreProcessor:
@@ -65,7 +65,7 @@ std::string _render_color(TokenType type) {
     case Literal:
       return "\x1b[34m";  // 常量
     default:
-      return "\x1b[37m";
+      return "";
   }
 }
 bool isIdentifier(const std::string& x) {
