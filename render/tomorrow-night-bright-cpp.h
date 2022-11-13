@@ -30,21 +30,15 @@ typedef enum TokenType {
   Literal = 8
 } TokenType;
 bool isnum(const std::string& p) {
-  try {
-    for (size_t i = 0; i < p.length(); i++) {
-      if ((p[i] >= L'0' && p[i] <= L'9') || p[i] == L'.' || p[i] == L'e')
-        ;
-      else
-        return false;
-    }
-    if (p.find_first_of('.') != std::wstring::npos ||
-        p.find_first_of('e') != std::wstring::npos)
-      return std::stod(p), true;
+  for (size_t i = 0; i < p.length(); i++) {
+    if ((p[i] >= '0' && p[i] <= '9') || (p[i] >= 'A' && p[i] <= 'F') ||
+        (p[i] >= 'a' && p[i] <= 'f') || p[i] == 'x' || p[i] == 'X' ||
+        p[i] == '.' || p[i] == 'e')
+      ;
     else
-      return std::stoi(p, 0, 0), true;
-  } catch (...) {
-    return false;
+      return false;
   }
+  return true;
 }
 std::string _render_color(TokenType type) {
   switch (type) {

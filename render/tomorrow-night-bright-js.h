@@ -30,21 +30,15 @@ typedef enum TokenType {
 } TokenType;
 bool isnum(const std::string& p) {
   if (p == "Infinity" || p == "NaN") return true;
-  try {
-    for (size_t i = 0; i < p.length(); i++) {
-      if ((p[i] >= L'0' && p[i] <= L'9') || p[i] == L'.' || p[i] == L'e')
-        ;
-      else
-        return false;
-    }
-    if (p.find_first_of('.') != std::wstring::npos ||
-        p.find_first_of('e') != std::wstring::npos)
-      return std::stod(p), true;
+  for (size_t i = 0; i < p.length(); i++) {
+    if ((p[i] >= '0' && p[i] <= '9') || (p[i] >= 'A' && p[i] <= 'F') ||
+        (p[i] >= 'a' && p[i] <= 'f') || p[i] == 'x' || p[i] == 'X' ||
+        p[i] == '.' || p[i] == 'e')
+      ;
     else
-      return std::stoi(p, 0, 0), true;
-  } catch (...) {
-    return false;
+      return false;
   }
+  return true;
 }
 std::string _render_color(TokenType type) {
   switch (type) {
@@ -97,9 +91,7 @@ std::array<std::string, 35> keyword = {
     "break", "continue", "if",    "else",   "switch",   "case",       "default",
     "throw", "try",      "catch", "var",    "let",      "const",      "return",
     "do",    "while",    "of",    "export", "debugger", "from",       "as"};
-std::array<std::string, 4> literal = {
-  "true", "false", "undefined", "null"
-};
+std::array<std::string, 4> literal = {"true", "false", "undefined", "null"};
 ColorText _get_colortext(const std::string& tmp) {
   if (std::find(keyword.cbegin(), keyword.cend(), tmp) != keyword.cend()) {
     return ColorText(tmp, _render_color(Keyword));
@@ -148,8 +140,7 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
       tmp = "";
     }
     if (tmp + text[i] == "//" && a == 0) {
-      ret.push_back(
-          ColorText(tmp + text.substr(i), _render_color(Comment)));
+      ret.push_back(ColorText(tmp + text.substr(i), _render_color(Comment)));
       tmp = "";
       break;
     } else if (tmp + text[i] == "/*" && a == 0) {
