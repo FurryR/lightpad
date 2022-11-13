@@ -41,10 +41,15 @@ typedef class UI {
               } else if (y == screen->size().y - 3) {
                 flag = RenderTextFlag::LowerBoundary;
               }
-              screen->set(
-                  Coord(x, y),
-                  Character(text[vec_index][str_index].content,
-                            text[vec_index][str_index].prefix + "\x1b[47m"));
+              if (text[vec_index][str_index].prefix == "") {
+                screen->set(Coord(x, y),
+                            Character(text[vec_index][str_index].content,
+                                      "\x1b[38;5;247m\x1b[47m"));
+              } else
+                screen->set(
+                    Coord(x, y),
+                    Character(text[vec_index][str_index].content,
+                              text[vec_index][str_index].prefix + "\x1b[47m"));
             } else {
               screen->set(Coord(x, y), text[vec_index][str_index]);
             }

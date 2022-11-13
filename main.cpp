@@ -32,20 +32,20 @@ std::vector<std::string> help_message = {
     "--- Lightpad v0.1.0 Help ---",
     "",
     "Keys: ",
-    "WASD(NORMAL mode)/Arrow - Move cursor",
-    "i(NORMAL mode) - Switch to INSERT mode",
-    "Esc(INSERT mode) - Switch to NORMAL mode",
-    ":(NORMAL mode) - Command",
-    "z(NORMAL mode) - Previous tab",
-    "x(NORMAL mode) - Next tab",
+    "  WASD(NORMAL mode)/Arrow - Move cursor",
+    "  i(NORMAL mode) - Switch to INSERT mode",
+    "  Esc(INSERT mode) - Switch to NORMAL mode",
+    "  :(NORMAL mode) - Command",
+    "  z(NORMAL mode) - Previous tab",
+    "  x(NORMAL mode) - Next tab",
     "",
     "Commands: ",
-    ":lang [cpp | js | plain] - Switch renderer for the code",
-    ":w (filename) - Write to file",
-    ":q - Quit/Close current tab",
-    ":q! - Force quit/close current tab (not recommended)",
-    ":new (filename) - Open a new tab (open filename if filename is specified)",
-    ":help - Display this help",
+    "  :lang [cpp | js | plain] - Switch renderer for the code",
+    "  :w (filename) - Write to file",
+    "  :q - Quit/Close current tab",
+    "  :q! - Force quit/close current tab (not recommended)",
+    "  :new (filename) - Open a new tab (open filename if filename is specified)",
+    "  :help - Display this help",
     "",
     "For example, use \":new\" to open a new tab and use \":lang cpp\" to "
     "switch the renderer.",
@@ -177,7 +177,7 @@ Parser get_command() {
           return false;
         } else {
           if ((*window_list)[*index].get_readonly()) {
-            ui->show_info("E: File is readonly");
+            ui->show_info("E: File is read-only");
             ui->update();
             return false;
           }
