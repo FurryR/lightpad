@@ -24,18 +24,20 @@ TextArea open_file(const std::string& filename) {
 }
 void render_default_ui(UI* ui) {
   ui->clear();
-  ui->show_bar(mode2str(Normal), "[unnamed]", "ln: 0/0 col: 0");
+  ui->show_bar(mode2str(Normal), "(unnamed)", "ln: 0/0 col: 0");
   ui->show_info("[0/0]");
   ui->update();
 }
 std::vector<std::string> help_message = {
-    "Lightpad v0.1.0 Help",
+    "--- Lightpad v0.1.0 Help ---",
     "",
     "Keys: ",
     "WASD(NORMAL mode)/Arrow - Move cursor",
     "i(NORMAL mode) - Switch to INSERT mode",
     "Esc(INSERT mode) - Switch to NORMAL mode",
     ":(NORMAL mode) - Command",
+    "z(NORMAL mode) - Previous tab",
+    "x(NORMAL mode) - Next tab",
     "",
     "Commands: ",
     ":lang [cpp | js | plain] - Switch renderer for the code",
@@ -43,7 +45,12 @@ std::vector<std::string> help_message = {
     ":q - Quit/Close current tab",
     ":q! - Force quit/close current tab (not recommended)",
     ":new (filename) - Open a new tab (open filename if filename is specified)",
-    ":help - Display this help"};
+    ":help - Display this help",
+    "",
+    "For example, use \":new\" to open a new tab and use \":lang cpp\" to "
+    "switch the renderer.",
+    "",
+    "Enjoy Lightpad."};
 Parser get_command() {
   Parser temp;
   temp.set(
@@ -293,6 +300,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
             window[window_index].process_key(cmd);
           break;
         }
+        case 'Z':
         case 'z': {
           // 上一个窗口
           if (window.size() > 0 || window[window_index].get_mode() == Normal) {
@@ -301,6 +309,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
             window[window_index].process_key(cmd);
           break;
         }
+        case 'X':
         case 'x': {
           // 下一个窗口
           if (window.size() > 0 || window[window_index].get_mode() == Normal) {

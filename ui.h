@@ -7,7 +7,10 @@
 #include "./screen.h"
 #include "./utils.h"
 #define TAB_SIZE 2
-typedef struct UI {
+typedef class UI {
+  Screen* screen;
+
+ public:
   typedef struct Modestr {
     std::string prefix;
     std::string mode;
@@ -16,11 +19,10 @@ typedef struct UI {
   } Modestr;
   // 用于帮助渲染滚屏。当光标达到上边界或下边界时被使用。
   typedef enum class RenderTextFlag {
-    None = 0,          // 一般的情况。
-    UpperBoundary = 1,    // 上边界。
-    LowerBoundary = 2  // 下边界。
+    None = 0,           // 一般的情况。
+    UpperBoundary = 1,  // 上边界。
+    LowerBoundary = 2   // 下边界。
   } RenderTextFlag;
-  Screen* screen;
   RenderTextFlag show_text(const std::vector<std::vector<Character>>& text,
                            const Coord& cursor, size_t xoffset = 0,
                            size_t* yoffset = 0) const {
@@ -145,51 +147,51 @@ UI::Modestr mode2str(Mode mode) {
   return UI::Modestr("UNKNOWN", "");
 }
 typedef class TextArea {
-  Coord cur_pos;
-  size_t x_before;
   std::vector<std::string> text;
   std::vector<std::vector<Character>> cache;
   std::string filename;
-  bool dirty;
-  bool file_changed;
-  bool readonly;
-  // @since v0.1.0 用于控制文本行偏移。
-  size_t yoffset;
-  // @since v0.1.0 用于保存文本渲染状态。
-  UI::RenderTextFlag render_flag;
   std::function<std::vector<std::vector<Character>>(
       const std::vector<std::string>&)>
       renderer;
+  Coord cur_pos;
+  size_t x_before;
+  // @since v0.1.0 用于控制文本行偏移。
+  size_t yoffset;
   Mode mode;
+  // @since v0.1.0 用于保存文本渲染状态。
+  UI::RenderTextFlag render_flag;
+  bool dirty;
+  bool file_changed;
+  bool readonly;
 
  public:
   TextArea() {}
   TextArea(const std::function<std::vector<std::vector<Character>>(
                const std::vector<std::string>&)>& renderer,
            const std::vector<std::string>& text, bool readonly)
-      : cur_pos(Coord(0, 0)),
+      : text(text),
+        renderer(renderer),
+        cur_pos(Coord(0, 0)),
         x_before(0),
         yoffset(0),
-        text(text),
+        mode(Normal),
+        render_flag(UI::RenderTextFlag::None),
         dirty(true),
         file_changed(false),
-        readonly(readonly),
-        renderer(renderer),
-        mode(Normal),
-        render_flag(UI::RenderTextFlag::None) {}
+        readonly(readonly) {}
   TextArea(const std::function<std::vector<std::vector<Character>>(
                const std::vector<std::string>&)>& renderer,
            const std::string& filename, bool readonly)
-      : cur_pos(Coord(0, 0)),
+      : filename(filename),
+        renderer(renderer),
+        cur_pos(Coord(0, 0)),
         x_before(0),
         yoffset(0),
-        filename(filename),
+        mode(Normal),
+        render_flag(UI::RenderTextFlag::None),
         dirty(true),
         file_changed(false),
-        readonly(readonly),
-        renderer(renderer),
-        mode(Normal),
-        render_flag(UI::RenderTextFlag::None) {
+        readonly(readonly) {
     std::ifstream fs = std::ifstream(filename);
     if (!fs) {
       text.push_back("");
@@ -248,7 +250,7 @@ typedef class TextArea {
         &yoffset);
     if (filename == "") {
       ui->show_bar(mode2str(mode),
-                   std::string("[unnamed]") + (file_changed ? "[+]" : ""),
+                   std::string("(unnamed)") + (file_changed ? "[+]" : ""),
                    std::string("ln: ") + std::to_string(cur_pos.y + 1) + "/" +
                        std::to_string(text.size()) +
                        " col: " + std::to_string(cur_pos.x + 1));
@@ -323,6 +325,7 @@ typedef class TextArea {
         }
         break;
       }
+      case 'I':
       case 'i': {
         // 插入模式
         if (mode == Normal && (!readonly)) {
@@ -331,6 +334,7 @@ typedef class TextArea {
           _process_insert(op);
         break;
       }
+      case 'W':
       case 'w': {
         // 上键
         if (mode == Normal) {
@@ -339,6 +343,7 @@ typedef class TextArea {
           _process_insert(op);
         break;
       }
+      case 'S':
       case 's': {
         // 下键
         if (mode == Normal) {
@@ -347,6 +352,7 @@ typedef class TextArea {
           _process_insert(op);
         break;
       }
+      case 'A':
       case 'a': {
         // 左键
         if (mode == Normal) {
@@ -355,6 +361,7 @@ typedef class TextArea {
           _process_insert(op);
         break;
       }
+      case 'D':
       case 'd': {
         // 右键
         if (mode == Normal) {
@@ -377,7 +384,8 @@ typedef class TextArea {
       case 'A': {
         if (cur_pos.y > 0) {
           cur_pos.y--;
-          if (render_flag == UI::RenderTextFlag::LowerBoundary && yoffset > 0) yoffset--;
+          if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
+            yoffset--;
           if (x_before >= text[cur_pos.y].length()) {
             cur_pos.x = text[cur_pos.y].length();
           } else {
@@ -390,7 +398,7 @@ typedef class TextArea {
       case 'B': {
         if (cur_pos.y < text.size() - 1) {
           cur_pos.y++;
-          if (render_flag == UI::RenderTextFlag::UpperBoundary) yoffset++;
+          if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
           if (x_before >= text[cur_pos.y].length()) {
             cur_pos.x = text[cur_pos.y].length();
           } else {
@@ -405,6 +413,8 @@ typedef class TextArea {
           cur_pos.x--;
         else if (cur_pos.y > 0) {
           cur_pos.y--;
+          if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
+            yoffset--;
           cur_pos.x = text[cur_pos.y].size();
         }
         x_before = cur_pos.x;
@@ -416,6 +426,7 @@ typedef class TextArea {
           cur_pos.x++;
         else if (cur_pos.y < text.size() - 1) {
           cur_pos.y++;
+          if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
           cur_pos.x = 0;
         }
         x_before = cur_pos.x;
