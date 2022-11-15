@@ -1,9 +1,9 @@
 #ifndef _UI_H
 #define _UI_H
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <iterator>
-#include <algorithm>
 
 #include "./screen.h"
 #include "./utils.h"
@@ -31,44 +31,37 @@ typedef class UI {
     size_t y = 0, x = 0;
     RenderTextFlag flag = RenderTextFlag::None;
     const Coord& sz = screen->size();
-    for (; y < sz.y - 2; y++) {
+    for (; y < sz.y - 2 && vec_index < text.size(); y++, vec_index++) {
       str_index = xoffset;
-      if (vec_index < text.size()) {
-        for (x = 0; x < sz.x; x++) {
-          if (str_index < text[vec_index].size()) {
-            if (vec_index == cursor.y && str_index == cursor.x) {
-              if (y == 0) {
-                flag = RenderTextFlag::UpperBoundary;
-              } else if (y == screen->size().y - 3) {
-                flag = RenderTextFlag::LowerBoundary;
-              }
-              if (text[vec_index][str_index].prefix == "") {
-                screen->set(Coord(x, y),
-                            Character(text[vec_index][str_index].content,
-                                      "\x1b[38;5;247m\x1b[47m"));
-              } else
-                screen->set(
-                    Coord(x, y),
-                    Character(text[vec_index][str_index].content,
-                              text[vec_index][str_index].prefix + "\x1b[47m"));
-            } else {
-              screen->set(Coord(x, y), text[vec_index][str_index]);
-            }
-            str_index++;
-          } else
-            break;
-        }
+      for (x = 0; x < sz.x && str_index < text[vec_index].size();
+           x++, str_index++) {
         if (vec_index == cursor.y && str_index == cursor.x) {
           if (y == 0) {
             flag = RenderTextFlag::UpperBoundary;
           } else if (y == screen->size().y - 3) {
             flag = RenderTextFlag::LowerBoundary;
           }
-          screen->set(Coord(x, y), Character(0, "\x1b[47m"));
+          if (text[vec_index][str_index].prefix == "") {
+            screen->set(Coord(x, y),
+                        Character(text[vec_index][str_index].content,
+                                  "\x1b[38;5;247m\x1b[47m"));
+          } else
+            screen->set(
+                Coord(x, y),
+                Character(text[vec_index][str_index].content,
+                          text[vec_index][str_index].prefix + "\x1b[47m"));
+        } else {
+          screen->set(Coord(x, y), text[vec_index][str_index]);
         }
-      } else
-        break;
-      vec_index++;
+      }
+      if (vec_index == cursor.y && str_index == cursor.x) {
+        if (y == 0) {
+          flag = RenderTextFlag::UpperBoundary;
+        } else if (y == screen->size().y - 3) {
+          flag = RenderTextFlag::LowerBoundary;
+        }
+        screen->set(Coord(x, y), Character(0, "\x1b[47m"));
+      }
     }
     if (vec_index == cursor.y) {
       if (y == 0) {
@@ -82,36 +75,35 @@ typedef class UI {
   }
   void show_bar(const Modestr& mode, const std::string& hint,
                 const std::string& back_str) const {
+    // 基层
+    for (size_t i = 0; i < screen->size().x; i++) {
+      screen->set(Coord(i, screen->size().y - 2), Character(0, "\x1b[44m"));
+    }
+    size_t counter = 0;
     // 左侧
-    screen->set(Coord(0, screen->size().y - 2), Character(0, mode.prefix));
-    for (size_t i = 0; i < mode.mode.length(); i++) {
-      screen->set(Coord(i + 1, screen->size().y - 2),
+    screen->set(Coord(counter++, screen->size().y - 2),
+                Character(0, mode.prefix));
+    for (size_t i = 0; i < mode.mode.length(); i++, counter++) {
+      screen->set(Coord(counter, screen->size().y - 2),
                   Character(mode.mode[i], mode.prefix));
     }
-    screen->set(Coord(mode.mode.length() + 1, screen->size().y - 2),
+    screen->set(Coord(counter++, screen->size().y - 2),
                 Character(0, mode.prefix));
     // 中间
-    size_t idx = 0;
-    for (size_t i = mode.mode.length() + 2; i < screen->size().x; i++) {
-      if (idx < hint.length() && i > mode.mode.length() + 2) {
-        screen->set(Coord(i, screen->size().y - 2),
-                    Character(hint[idx], "\x1b[97;44m"));
-        idx++;
-      } else {
-        screen->set(Coord(i, screen->size().y - 2), Character(0, "\x1b[44m"));
-      }
+    screen->set(Coord(counter++, screen->size().y - 2),
+                Character(0, "\x1b[44m"));
+    for (size_t i = 0; i < hint.length(); counter++, i++) {
+      screen->set(Coord(counter, screen->size().y - 2),
+                  Character(hint[i], "\x1b[97;44m"));
     }
     // 右侧
-    screen->set(Coord(screen->size().x - 1, screen->size().y - 2),
-                Character(0, "\x1b[43m"));
-    for (size_t i = 0; i < back_str.length(); i++) {
-      screen->set(Coord(screen->size().x - (back_str.length() - i) - 1,
-                        screen->size().y - 2),
+    counter = screen->size().x - 1;
+    screen->set(Coord(counter, screen->size().y - 2), Character(0, "\x1b[43m"));
+    for (size_t i = back_str.length(); counter--, i--;) {
+      screen->set(Coord(counter, screen->size().y - 2),
                   Character(back_str[i], "\x1b[30;43m"));
     }
-    screen->set(
-        Coord(screen->size().x - back_str.length() - 2, screen->size().y - 2),
-        Character(0, "\x1b[43m"));
+    screen->set(Coord(counter, screen->size().y - 2), Character(0, "\x1b[43m"));
   }
   void show_info(const std::string& info) const {
     for (size_t x = 0; x < screen->size().x; x++) {
