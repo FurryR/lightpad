@@ -15,8 +15,8 @@ typedef struct Character {
   explicit Character(char content) : prefix(""), content(content) {}
   Character(char content, const std::string& prefix)
       : prefix(prefix), content(content) {}
-  void output() const {
-    if (prefix != "") {
+  void output(bool print_prefix) const {
+    if (print_prefix) {
       std::cout << prefix << (content == 0 ? ' ' : content);
     } else {
       std::cout << (content == 0 ? ' ' : content);
@@ -47,16 +47,22 @@ typedef class Screen {
   }
   void show() {
     bool flag = false;
+    std::string str = "";
     _clear();
     for (size_t y = 0; y < _size.y; y++) {
       for (size_t x = 0; x < _size.x; x++) {
         if (!(buf[y][x] == history[y][x])) {
-          std::cout << "\x1b[0m";
           if (flag) {
             std::cout << "\x1b[" << (y + 1) << ";" << (x + 1) << "H";
             flag = false;
           }
-          buf[y][x].output();
+          if (str != buf[y][x].prefix) {
+            std::cout << "\x1b[0m";
+            str = buf[y][x].prefix;
+            buf[y][x].output(true);
+          } else {
+            buf[y][x].output(false);
+          }
           history[y][x] = buf[y][x];
         } else {
           flag = true;
