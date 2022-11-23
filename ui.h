@@ -22,7 +22,7 @@ typedef class UI {
   typedef enum class RenderTextFlag {
     None = 0,           // 一般的情况。
     UpperBoundary = 1,  // 上边界。
-    LowerBoundary = 2   // 下边界。
+    LowerBoundary = 2,  // 下边界。
   } RenderTextFlag;
   RenderTextFlag show_text(const std::vector<std::vector<Character>>& text,
                            const Coord& cursor, size_t xoffset = 0,
@@ -134,30 +134,59 @@ std::vector<std::vector<Character>> render(
   return ret;
 }
 };  // namespace PlainText
-typedef enum Mode { Normal = 0, Insert = 1 } Mode;
+typedef enum Mode { Normal = 0, Insert = 1, Select = 2 } Mode;
 UI::Modestr mode2str(Mode mode) {
   switch (mode) {
     case Normal:
       return UI::Modestr("NORMAL", "\x1b[42m\x1b[30m");
     case Insert:
       return UI::Modestr("INSERT", "\x1b[43m\x1b[30m");
+    case Select:
+      return UI::Modestr("SELECT", "\x1b[41m\x1b[30m");
   }
   return UI::Modestr("UNKNOWN", "");
 }
 typedef class TextArea {
+  typedef struct ScreenPos {
+    // @since v0.1.1 用于保存当前光标位置。
+    Coord cur_pos;
+    // @since v0.1.1 用于控制文本行偏移。
+    size_t yoffset;
+    // @since v0.1.1 用于保存文本渲染状态。
+    UI::RenderTextFlag render_flag;
+    void add_y(size_t max_y) {
+      if (cur_pos.y < max_y) {
+        if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
+        cur_pos.y++;
+      }
+    }
+    void sub_y() {
+      if (cur_pos.y > 0) {
+        if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
+          yoffset--;
+        cur_pos.y--;
+      }
+    }
+    void set_y(size_t y) {
+      yoffset = y == 0 ? 0 : (y - 1);
+      render_flag = UI::RenderTextFlag::None;
+      cur_pos.y = y;
+    }
+    ScreenPos() {}
+    ScreenPos(const Coord& cur_pos, size_t yoffset,
+              UI::RenderTextFlag render_flag)
+        : cur_pos(cur_pos), yoffset(yoffset), render_flag(render_flag) {}
+  } ScreenPos;
   std::vector<std::string> text;
   std::vector<std::vector<Character>> cache;
   std::string filename;
   std::function<std::vector<std::vector<Character>>(
       const std::vector<std::string>&)>
       renderer;
-  Coord cur_pos;
+  ScreenPos pos;
+  std::pair<Coord, Coord> select_pos;
   size_t x_before;
-  // @since v0.1.0 用于控制文本行偏移。
-  size_t yoffset;
   Mode mode;
-  // @since v0.1.0 用于保存文本渲染状态。
-  UI::RenderTextFlag render_flag;
   bool dirty;
   bool file_changed;
   bool readonly;
@@ -169,11 +198,10 @@ typedef class TextArea {
            const std::vector<std::string>& text, bool readonly)
       : text(text),
         renderer(renderer),
-        cur_pos(Coord(0, 0)),
+        pos(Coord(0, 0), 0, UI::RenderTextFlag::None),
+        select_pos({Coord(0, 0), Coord(0, 0)}),
         x_before(0),
-        yoffset(0),
         mode(Normal),
-        render_flag(UI::RenderTextFlag::None),
         dirty(true),
         file_changed(false),
         readonly(readonly) {}
@@ -182,11 +210,10 @@ typedef class TextArea {
            const std::string& filename, bool readonly)
       : filename(filename),
         renderer(renderer),
-        cur_pos(Coord(0, 0)),
+        pos(Coord(0, 0), 0, UI::RenderTextFlag::None),
+        select_pos({Coord(0, 0), Coord(0, 0)}),
         x_before(0),
-        yoffset(0),
         mode(Normal),
-        render_flag(UI::RenderTextFlag::None),
         dirty(true),
         file_changed(false),
         readonly(readonly) {
@@ -211,6 +238,10 @@ typedef class TextArea {
   }
 
  public:
+  Coord& start_range() noexcept { return select_pos.first; }
+  Coord& end_range() noexcept { return select_pos.second; }
+  const Coord& start_range() const noexcept { return select_pos.first; }
+  const Coord& end_range() const noexcept { return select_pos.second; }
   Mode get_mode() const noexcept { return mode; }
   bool get_readonly() const noexcept { return readonly; }
   bool write(const std::string& dst) {
@@ -236,77 +267,115 @@ typedef class TextArea {
     renderer = new_renderer;
     dirty = true;
   }
+  std::vector<std::vector<Character>> select_render(
+      const std::vector<std::vector<Character>>& c) const {
+    std::vector<std::vector<Character>> ret = c;
+    for (size_t y = start_range().y; y < end_range().y + 1; y++) {
+      for (size_t x = start_range().x;
+           y == end_range().y ? (x < end_range().x) : (x < ret[y].size());
+           x++) {
+        if (ret[y][x].prefix == "")
+          ret[y][x].prefix = "\x1b[38;5;247m\x1b[48;5;250m";
+        else
+          ret[y][x].prefix += "\x1b[48;5;250m";
+      }
+    }
+    return ret;
+  }
   void render(UI* ui, const std::string& info) {
     ui->clear();
     if (dirty) {
       cache = renderer(text);
       dirty = false;
     }
-    render_flag = ui->show_text(
-        cache, cur_pos,
-        (size_t)std::max<int>({0, int(cur_pos.x - ui->size().x + 1)}),
-        &yoffset);
+    pos.render_flag = ui->show_text(
+        mode == Select ? select_render(cache) : cache, pos.cur_pos,
+        (size_t)std::max<int>({0, int(pos.cur_pos.x - ui->size().x + 1)}),
+        &pos.yoffset);
     if (filename == "") {
       ui->show_bar(mode2str(mode),
                    std::string("(unnamed)") + (file_changed ? "[+]" : ""),
-                   std::string("ln: ") + std::to_string(cur_pos.y + 1) + "/" +
-                       std::to_string(text.size()) +
-                       " col: " + std::to_string(cur_pos.x + 1));
+                   std::string("ln: ") + std::to_string(pos.cur_pos.y + 1) +
+                       "/" + std::to_string(text.size()) +
+                       " col: " + std::to_string(pos.cur_pos.x + 1));
     } else {
       ui->show_bar(mode2str(mode),
                    filename.substr(filename.find_last_of('/') + 1) +
                        (file_changed ? "[+]" : ""),
-                   std::string("ln: ") + std::to_string(cur_pos.y + 1) + "/" +
-                       std::to_string(text.size()) +
-                       " col: " + std::to_string(cur_pos.x + 1));
+                   std::string("ln: ") + std::to_string(pos.cur_pos.y + 1) +
+                       "/" + std::to_string(text.size()) +
+                       " col: " + std::to_string(pos.cur_pos.x + 1));
     }
     ui->show_info(info);
     ui->update();
   }
   void _process_insert(char op) {
+    bool flag = false;
     if (readonly) return;
     file_changed = true;
+    if (mode == Select) {
+      dirty = true;
+      flag = true;
+      if (start_range().y == end_range().y) {
+        text[start_range().y] =
+            text[start_range().y].substr(
+                0, start_range().x == 0 ? 0 : (start_range().x - 1)) +
+            text[start_range().y].substr(end_range().x);
+      } else {
+        text.erase(text.cbegin() + start_range().y,
+                   text.cbegin() + end_range().y - 1);
+        text[start_range().y] = text[start_range().y].substr(
+            0, start_range().x == 0 ? 0 : (start_range().x - 1));
+        if (end_range().x >= text[end_range().y].size())
+          text.erase(text.cbegin() + end_range().y);
+        else
+          text[end_range().y] = text[end_range().y].substr(end_range().x);
+      }
+      pos.cur_pos = start_range();
+      mode = Insert;
+    }
     switch (op) {
       case '\n': {
         // 换行
-        text.insert(text.begin() + cur_pos.y + 1,
-                    text[cur_pos.y].substr(cur_pos.x));
-        text[cur_pos.y] = text[cur_pos.y].substr(0, cur_pos.x);
-        cur_pos.y++;
-        if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
-        cur_pos.x = 0;
+        text.insert(text.begin() + pos.cur_pos.y + 1,
+                    text[pos.cur_pos.y].substr(pos.cur_pos.x));
+        text[pos.cur_pos.y] = text[pos.cur_pos.y].substr(0, pos.cur_pos.x);
+        pos.add_y(text.size() - 1);
+        pos.cur_pos.x = 0;
         dirty = true;
         break;
       }
       case 127: {
         // 退格
-        if (cur_pos.x != 0 || cur_pos.y != 0) {
-          if (cur_pos.x == 0 && cur_pos.y > 0) {
-            size_t tmp = text[cur_pos.y - 1].length();
-            text[cur_pos.y - 1] += text[cur_pos.y];
-            text.erase(text.cbegin() + cur_pos.y);
-            cur_pos.y--;
-            if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
-              yoffset--;
-            cur_pos.x = tmp;
-          } else {
-            text[cur_pos.y] = text[cur_pos.y].substr(0, cur_pos.x - 1) +
-                              text[cur_pos.y].substr(cur_pos.x);
-            cur_pos.x--;
+        if (!flag) {
+          if (pos.cur_pos.x != 0 || pos.cur_pos.y != 0) {
+            if (pos.cur_pos.x == 0 && pos.cur_pos.y > 0) {
+              size_t tmp = text[pos.cur_pos.y - 1].length();
+              text[pos.cur_pos.y - 1] += text[pos.cur_pos.y];
+              text.erase(text.cbegin() + pos.cur_pos.y);
+              pos.sub_y();
+              pos.cur_pos.x = tmp;
+            } else {
+              text[pos.cur_pos.y] =
+                  text[pos.cur_pos.y].substr(0, pos.cur_pos.x - 1) +
+                  text[pos.cur_pos.y].substr(pos.cur_pos.x);
+              pos.cur_pos.x--;
+            }
+            dirty = true;
           }
-          dirty = true;
         }
         break;
       }
       default: {
         if (op == '\t') {
-          text[cur_pos.y] = text[cur_pos.y].substr(0, cur_pos.x) +
-                            std::string(TAB_SIZE, ' ') +
-                            text[cur_pos.y].substr(cur_pos.x);
-          cur_pos.x += TAB_SIZE;
+          text[pos.cur_pos.y] = text[pos.cur_pos.y].substr(0, pos.cur_pos.x) +
+                                std::string(TAB_SIZE, ' ') +
+                                text[pos.cur_pos.y].substr(pos.cur_pos.x);
+          pos.cur_pos.x += TAB_SIZE;
         } else {
-          text[cur_pos.y].insert(text[cur_pos.y].begin() + cur_pos.x, op);
-          cur_pos.x++;
+          text[pos.cur_pos.y].insert(
+              text[pos.cur_pos.y].begin() + pos.cur_pos.x, op);
+          pos.cur_pos.x++;
         }
         dirty = true;
       }
@@ -371,8 +440,18 @@ typedef class TextArea {
           _process_insert(op);
         break;
       }
+      case 'V':
+      case 'v': {
+        // 右键
+        if (mode == Normal && (!readonly)) {
+          mode = Select;
+          start_range() = end_range() = pos.cur_pos;
+        } else
+          _process_insert(op);
+        break;
+      }
       default: {
-        if (mode == Insert) {
+        if (mode == Insert || mode == Select) {
           _process_insert(op);
         }
         break;
@@ -383,55 +462,57 @@ typedef class TextArea {
     switch (op) {
       // up
       case 'A': {
-        if (cur_pos.y > 0) {
-          cur_pos.y--;
-          if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
-            yoffset--;
-          if (x_before >= text[cur_pos.y].length()) {
-            cur_pos.x = text[cur_pos.y].length();
+        if (pos.cur_pos.y > 0) {
+          pos.sub_y();
+          if (x_before >= text[pos.cur_pos.y].length()) {
+            pos.cur_pos.x = text[pos.cur_pos.y].length();
           } else {
-            cur_pos.x = x_before;
+            pos.cur_pos.x = x_before;
           }
         }
         break;
       }
       // down
       case 'B': {
-        if (cur_pos.y < text.size() - 1) {
-          cur_pos.y++;
-          if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
-          if (x_before >= text[cur_pos.y].length()) {
-            cur_pos.x = text[cur_pos.y].length();
+        if (pos.cur_pos.y < text.size() - 1) {
+          pos.add_y(text.size() - 1);
+          if (x_before >= text[pos.cur_pos.y].length()) {
+            pos.cur_pos.x = text[pos.cur_pos.y].length();
           } else {
-            cur_pos.x = x_before;
+            pos.cur_pos.x = x_before;
           }
         }
         break;
       }
       // left
       case 'D': {
-        if (cur_pos.x > 0)
-          cur_pos.x--;
-        else if (cur_pos.y > 0) {
-          cur_pos.y--;
-          if (render_flag == UI::RenderTextFlag::UpperBoundary && yoffset > 0)
-            yoffset--;
-          cur_pos.x = text[cur_pos.y].size();
+        if (pos.cur_pos.x > 0)
+          pos.cur_pos.x--;
+        else if (pos.cur_pos.y > 0) {
+          pos.sub_y();
+          pos.cur_pos.x = text[pos.cur_pos.y].size();
         }
-        x_before = cur_pos.x;
+        x_before = pos.cur_pos.x;
         break;
       }
       // right
       case 'C': {
-        if (cur_pos.x < text[cur_pos.y].length())
-          cur_pos.x++;
-        else if (cur_pos.y < text.size() - 1) {
-          cur_pos.y++;
-          if (render_flag == UI::RenderTextFlag::LowerBoundary) yoffset++;
-          cur_pos.x = 0;
+        if (pos.cur_pos.x < text[pos.cur_pos.y].length())
+          pos.cur_pos.x++;
+        else if (pos.cur_pos.y < text.size() - 1) {
+          pos.add_y(text.size() - 1);
+          pos.cur_pos.x = 0;
         }
-        x_before = cur_pos.x;
+        x_before = pos.cur_pos.x;
         break;
+      }
+    }
+    if (mode == Select) {
+      if (start_range().y > pos.cur_pos.y && start_range().x > pos.cur_pos.x) {
+        end_range() = start_range();
+        start_range() = pos.cur_pos;
+      } else {
+        end_range() = pos.cur_pos;
       }
     }
   }

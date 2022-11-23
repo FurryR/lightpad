@@ -31,7 +31,6 @@ typedef class Screen {
   std::vector<std::vector<Character>> history;
   Coord _size;
   void _init() const { std::cout << "\x1b[2J\x1b[1;1H"; }
-  void _clear() const { std::cout << "\x1b[1;1H"; }
   bool _test(const Coord& pos) const noexcept {
     return pos.x < _size.x && pos.y < _size.y;
   }
@@ -46,9 +45,8 @@ typedef class Screen {
     _init();
   }
   void show() {
-    bool flag = false;
+    bool flag = true;
     std::string str = "";
-    _clear();
     for (size_t y = 0; y < _size.y; y++) {
       for (size_t x = 0; x < _size.x; x++) {
         if (!(buf[y][x] == history[y][x])) {
