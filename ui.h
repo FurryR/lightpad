@@ -24,11 +24,18 @@ typedef class UI {
     UpperBoundary = 1,  // 上边界。
     LowerBoundary = 2,  // 下边界。
   } YRenderTextFlag;
-  YRenderTextFlag show_text(const std::vector<std::vector<Character>>& text,
-                            const Coord& cursor, size_t xoffset = 0,
-                            size_t yoffset = 0) const {
+  // 用于帮助渲染滚屏。当光标达到左边界或右边界时被使用。
+  typedef enum class XRenderTextFlag {
+    None = 0,           // 一般的情况。
+    LeftBoundary = 1,   // 上边界。
+    RightBoundary = 2,  // 下边界。
+  } XRenderTextFlag;
+  std::pair<XRenderTextFlag, YRenderTextFlag> show_text(
+      const std::vector<std::vector<Character>>& text, const Coord& cursor,
+      size_t xoffset = 0, size_t yoffset = 0) const {
     size_t vec_index = yoffset, str_index = 0;
     size_t y = 0, x = 0;
+    XRenderTextFlag flag = XRenderTextFlag::None;
     YRenderTextFlag flag2 = YRenderTextFlag::None;
     const Coord& sz = screen->size();
     for (; y < sz.y - 2 && vec_index < text.size(); y++, vec_index++) {
@@ -36,6 +43,11 @@ typedef class UI {
       for (x = 0; x < sz.x && str_index < text[vec_index].size();
            x++, str_index++) {
         if (vec_index == cursor.y && str_index == cursor.x) {
+          if (x == 0) {
+            flag = XRenderTextFlag::LeftBoundary;
+          } else if (x == screen->size().x - 1) {
+            flag = XRenderTextFlag::RightBoundary;
+          }
           if (y == 0) {
             flag2 = YRenderTextFlag::UpperBoundary;
           } else if (y == screen->size().y - 3) {
@@ -55,6 +67,11 @@ typedef class UI {
         }
       }
       if (vec_index == cursor.y && str_index == cursor.x) {
+        if (x == 0) {
+          flag = XRenderTextFlag::LeftBoundary;
+        } else if (x == screen->size().x - 1) {
+          flag = XRenderTextFlag::RightBoundary;
+        }
         if (y == 0) {
           flag2 = YRenderTextFlag::UpperBoundary;
         } else if (y == screen->size().y - 3) {
@@ -64,6 +81,11 @@ typedef class UI {
       }
     }
     if (vec_index == cursor.y) {
+      if (x == 0) {
+        flag = XRenderTextFlag::LeftBoundary;
+      } else if (x == screen->size().x - 1) {
+        flag = XRenderTextFlag::RightBoundary;
+      }
       if (y == 0) {
         flag2 = YRenderTextFlag::UpperBoundary;
       } else if (y == screen->size().y - 3) {
@@ -71,7 +93,7 @@ typedef class UI {
       }
       screen->set(Coord(0, y), Character(0, "\x1b[47m"));
     }
-    return flag2;
+    return {flag, flag2};
   }
   void show_bar(const Modestr& mode, const std::string& hint,
                 const std::string& back_str) const {
@@ -152,45 +174,74 @@ typedef class TextArea {
     Coord cur_pos;
 
    public:
+    // @since v0.1.1 用于控制文本列偏移。
+    size_t xoffset;
     // @since v0.1.1 用于控制文本行偏移。
     size_t yoffset;
     // @since v0.1.1 用于保存文本渲染状态。
+    UI::XRenderTextFlag xrender_flag;
+    // @since v0.1.1 用于保存文本渲染状态。
     UI::YRenderTextFlag yrender_flag;
-
-    void add_y(size_t max_y) {
+    void add_y(size_t max_y) noexcept {
       if (cur_pos.y < max_y) {
         if (yrender_flag == UI::YRenderTextFlag::LowerBoundary) yoffset++;
         cur_pos.y++;
       }
     }
-    void sub_y() {
+    void sub_y() noexcept {
       if (cur_pos.y > 0) {
         if (yrender_flag == UI::YRenderTextFlag::UpperBoundary && yoffset > 0)
           yoffset--;
         cur_pos.y--;
       }
     }
-    void set_y(size_t y, size_t new_yoffset) {
-      yoffset = new_yoffset;
-      yrender_flag = UI::YRenderTextFlag::None;
+    void set_y(size_t y, size_t screen_y) noexcept {
       cur_pos.y = y;
+      if (yoffset < y && (y - yoffset) >= screen_y) {
+        // 更小
+        yoffset = y <= screen_y ? 0 : (y - screen_y);
+        yrender_flag = UI::YRenderTextFlag::None;
+      } else if (yoffset > y) {
+        // 更大
+        yoffset = y <= screen_y ? 0 : (y - screen_y);
+        yrender_flag = UI::YRenderTextFlag::None;
+      }
     }
-    void add_x(size_t max_x) {
+    void add_x(size_t max_x) noexcept {
       if (cur_pos.x < max_x) {
+        if (xrender_flag == UI::XRenderTextFlag::RightBoundary) xoffset++;
         cur_pos.x++;
       }
     }
-    void sub_x() {
+    void sub_x() noexcept {
       if (cur_pos.x > 0) {
+        if (xrender_flag == UI::XRenderTextFlag::LeftBoundary && xoffset > 0)
+          xoffset--;
         cur_pos.x--;
       }
     }
-    void set_x(size_t x) { cur_pos.x = x; }
-    const Coord& pos() { return cur_pos; }
+    void set_x(size_t x, size_t screen_x) noexcept {
+      cur_pos.x = x;
+      if (xoffset < x && (x - xoffset) >= screen_x) {
+        // 更小
+        xoffset = x <= screen_x ? 0 : (x - screen_x);
+        xrender_flag = UI::XRenderTextFlag::None;
+      } else if (xoffset >= x) {
+        // 更大
+        xoffset = x <= screen_x ? 0 : (x - screen_x);
+        xrender_flag = UI::XRenderTextFlag::None;
+      }
+    }
+    const Coord& pos() const noexcept { return cur_pos; }
     ScreenPos() {}
-    ScreenPos(const Coord& cur_pos, size_t yoffset,
+    ScreenPos(const Coord& cur_pos, size_t xoffset, size_t yoffset,
+              UI::XRenderTextFlag xrender_flag,
               UI::YRenderTextFlag yrender_flag)
-        : cur_pos(cur_pos), yoffset(yoffset), yrender_flag(yrender_flag) {}
+        : cur_pos(cur_pos),
+          xoffset(xoffset),
+          yoffset(yoffset),
+          xrender_flag(xrender_flag),
+          yrender_flag(yrender_flag) {}
   } ScreenPos;
   std::vector<std::string> text;
   std::vector<std::vector<Character>> cache;
@@ -214,7 +265,8 @@ typedef class TextArea {
            const std::vector<std::string>& text, bool readonly)
       : text(text),
         renderer(renderer),
-        pos(Coord(0, 0), 0, UI::YRenderTextFlag::None),
+        pos(Coord(0, 0), 0, 0, UI::XRenderTextFlag::None,
+            UI::YRenderTextFlag::None),
         select_pos({Coord(0, 0), Coord(0, 0)}),
         select_yoffset(0),
         x_before(0),
@@ -227,7 +279,8 @@ typedef class TextArea {
            const std::string& filename, bool readonly)
       : filename(filename),
         renderer(renderer),
-        pos(Coord(0, 0), 0, UI::YRenderTextFlag::None),
+        pos(Coord(0, 0), 0, 0, UI::XRenderTextFlag::None,
+            UI::YRenderTextFlag::None),
         select_pos({Coord(0, 0), Coord(0, 0)}),
         select_yoffset(0),
         x_before(0),
@@ -256,11 +309,21 @@ typedef class TextArea {
   }
 
  public:
+  std::vector<std::string>& get_text() noexcept { return text; }
+  void set_pos(const UI& ui, const Coord& new_pos) noexcept {
+    pos.set_x(new_pos.x, ui.size().x - 1);
+    pos.set_y(new_pos.y, ui.size().y - 3);
+  }
   Coord& start_range() noexcept { return select_pos.first; }
   Coord& end_range() noexcept { return select_pos.second; }
   const Coord& start_range() const noexcept { return select_pos.first; }
   const Coord& end_range() const noexcept { return select_pos.second; }
   Mode get_mode() const noexcept { return mode; }
+  void select(const Coord& _start_range, const Coord& _end_range) noexcept {
+    mode = Select;
+    start_range() = _start_range;
+    end_range() = _end_range;
+  }
   bool get_readonly() const noexcept { return readonly; }
   bool write(const std::string& dst) {
     std::ofstream fs = std::ofstream(dst);
@@ -308,10 +371,14 @@ typedef class TextArea {
       cache = renderer(text);
       dirty = false;
     }
-    pos.yrender_flag = ui->show_text(
-        mode == Select ? select_render(cache) : cache, pos.pos(),
-        (size_t)std::max<int>({0, int(pos.pos().x - ui->size().x + 1)}),
-        pos.yoffset);
+    // pos.yrender_flag = ui->show_text(
+    //     mode == Select ? select_render(cache) : cache, pos.pos(),
+    //     (size_t)std::max<int>({0, int(pos.pos().x - ui->size().x + 1)}),
+    //     pos.yoffset);
+    std::pair<UI::XRenderTextFlag, UI::YRenderTextFlag> temp =
+        ui->show_text(mode == Select ? select_render(cache) : cache, pos.pos(),
+                      pos.xoffset, pos.yoffset);
+    pos.xrender_flag = temp.first, pos.yrender_flag = temp.second;
     if (filename == "") {
       ui->show_bar(mode2str(mode),
                    std::string("(unnamed)") + (file_changed ? "[+]" : ""),
@@ -329,7 +396,7 @@ typedef class TextArea {
     ui->show_info(info);
     ui->update();
   }
-  void _process_insert(char op) {
+  void _process_insert(const UI& screen, char op) {
     bool flag = false;
     if (readonly) return;
     file_changed = true;
@@ -354,8 +421,8 @@ typedef class TextArea {
                     : (end_range().x + 1));
         text.erase(text.cbegin() + start_range().y + 1);
       }
-      pos.set_x(start_range().x);
-      pos.set_y(start_range().y, select_yoffset);
+      pos.set_x(start_range().x, screen.size().x - 1);
+      pos.set_y(start_range().y, screen.size().y - 3);
       start_range() = end_range() = Coord(0, 0);
       select_yoffset = 0;
       mode = Insert;
@@ -367,7 +434,7 @@ typedef class TextArea {
                     text[pos.pos().y].substr(pos.pos().x));
         text[pos.pos().y] = text[pos.pos().y].substr(0, pos.pos().x);
         pos.add_y(text.size() - 1);
-        pos.set_x(0);
+        pos.set_x(0, screen.size().x - 1);
         dirty = true;
         break;
       }
@@ -380,7 +447,7 @@ typedef class TextArea {
               text[pos.pos().y - 1] += text[pos.pos().y];
               text.erase(text.cbegin() + pos.pos().y);
               pos.sub_y();
-              pos.set_x(tmp);
+              pos.set_x(tmp, screen.size().x - 1);
 
             } else {
               text[pos.pos().y] = text[pos.pos().y].substr(0, pos.pos().x - 1) +
@@ -398,7 +465,7 @@ typedef class TextArea {
                               std::string(TAB_SIZE, ' ') +
                               text[pos.pos().y].substr(pos.pos().x);
           // pos.pos().x += TAB_SIZE;
-          pos.set_x(pos.pos().x + 2);
+          pos.set_x(pos.pos().x + 2, screen.size().x - 1);
         } else {
           text[pos.pos().y].insert(text[pos.pos().y].begin() + pos.pos().x, op);
           pos.add_x(text[pos.pos().y].length());
@@ -407,14 +474,14 @@ typedef class TextArea {
       }
     }
   }
-  void process_key(char op) {
+  void process_key(const UI& screen, char op) {
     switch (op) {
       case '\x1b': {
         // Esc, 方向键
         if (kbhit() == '[') {
           // 方向键
           getch();
-          process_arrow(getch());
+          process_arrow(screen, getch());
         } else {
           if (mode == Select) {
             start_range() = end_range() = Coord(0, 0);
@@ -431,43 +498,43 @@ typedef class TextArea {
         if (mode == Normal && (!readonly)) {
           mode = Insert;
         } else if (mode != Select)
-          _process_insert(op);
+          _process_insert(screen, op);
         break;
       }
       case 'W':
       case 'w': {
         // 上键
         if (mode == Normal || mode == Select) {
-          process_arrow('A');
+          process_arrow(screen, 'A');
         } else
-          _process_insert(op);
+          _process_insert(screen, op);
         break;
       }
       case 'S':
       case 's': {
         // 下键
         if (mode == Normal || mode == Select) {
-          process_arrow('B');
+          process_arrow(screen, 'B');
         } else
-          _process_insert(op);
+          _process_insert(screen, op);
         break;
       }
       case 'A':
       case 'a': {
         // 左键
         if (mode == Normal || mode == Select) {
-          process_arrow('D');
+          process_arrow(screen, 'D');
         } else
-          _process_insert(op);
+          _process_insert(screen, op);
         break;
       }
       case 'D':
       case 'd': {
         // 右键
         if (mode == Normal || mode == Select) {
-          process_arrow('C');
+          process_arrow(screen, 'C');
         } else
-          _process_insert(op);
+          _process_insert(screen, op);
         break;
       }
       case 'V':
@@ -478,33 +545,33 @@ typedef class TextArea {
           start_range() = end_range() = pos.pos();
           select_yoffset = pos.yoffset;
         } else if (mode != Select)
-          _process_insert(op);
+          _process_insert(screen, op);
         break;
       }
       case 127: {
         if (mode == Insert || mode == Select) {
-          _process_insert(op);
+          _process_insert(screen, op);
         }
         break;
       }
       default: {
         if (mode == Insert) {
-          _process_insert(op);
+          _process_insert(screen, op);
         }
         break;
       }
     }
   }
-  void process_arrow(char op) {
+  void process_arrow(const UI& screen, char op) {
     switch (op) {
       // up
       case 'A': {
         if (pos.pos().y > 0) {
           pos.sub_y();
           if (x_before >= text[pos.pos().y].length()) {
-            pos.set_x(text[pos.pos().y].length());
+            pos.set_x(text[pos.pos().y].length(), screen.size().x - 1);
           } else {
-            pos.set_x(x_before);
+            pos.set_x(x_before, screen.size().x - 1);
           }
           if (mode == Select) {
             if (start_range().y > pos.pos().y ||
@@ -525,9 +592,9 @@ typedef class TextArea {
         if (pos.pos().y < text.size() - 1) {
           pos.add_y(text.size() - 1);
           if (x_before >= text[pos.pos().y].length()) {
-            pos.set_x(text[pos.pos().y].length());
+            pos.set_x(text[pos.pos().y].length(), screen.size().x - 1);
           } else {
-            pos.set_x(x_before);
+            pos.set_x(x_before, screen.size().x - 1);
           }
           if (mode == Select) {
             if (end_range().y > pos.pos().y ||
@@ -546,7 +613,7 @@ typedef class TextArea {
           pos.add_x(text[pos.pos().y].length());
         else if (pos.pos().y < text.size() - 1) {
           pos.add_y(text.size() - 1);
-          pos.set_x(0);
+          pos.set_x(0, screen.size().x - 1);
         }
         x_before = pos.pos().x;
         if (mode == Select) {
@@ -565,7 +632,7 @@ typedef class TextArea {
           pos.sub_x();
         else if (pos.pos().y > 0) {
           pos.sub_y();
-          pos.set_x(text[pos.pos().y].size());
+          pos.set_x(text[pos.pos().y].size(), screen.size().x - 1);
         }
         x_before = pos.pos().x;
         if (mode == Select) {

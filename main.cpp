@@ -123,6 +123,29 @@ Parser get_command() {
                return true;
              }
            });
+  temp.set(":find",
+           [](const std::string& arg, UI* ui,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
+             if (window_list->size() != 0) {
+               for (size_t y = 0; y < (*window_list)[*index].get_text().size();
+                    y++) {
+                 size_t pos = (*window_list)[*index].get_text()[y].find(arg);
+                 if (pos != std::string::npos) {
+                   (*window_list)[*index].set_pos(*ui, Coord(pos, y));
+                   (*window_list)[*index].select(
+                       Coord(pos, y), Coord(pos + arg.length() - 1, y));
+                   return true;
+                 }
+               }
+               ui->show_info("E: Nothing matched");
+               ui->update();
+               return false;
+             } else {
+               ui->show_info("E: No tabs available");
+               ui->update();
+               return false;
+             }
+           });
   temp.set(":help",
            [](const std::string&, UI*, std::vector<TextArea>* window_list,
               size_t* index) -> bool {
@@ -279,7 +302,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
       cmd = getch();
       switch (cmd) {
         case ':': {
-          if (window.size() == 0 || window[window_index].get_mode() == Normal ) {
+          if (window.size() == 0 || window[window_index].get_mode() == Normal) {
             // 命令系统
             bool execute = true;
             int tmp;
@@ -300,7 +323,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
             if (!execute) break;
             flag = parser.execute(cmd, &ui, &window, &window_index);
           } else if (window.size() != 0)
-            window[window_index].process_key(cmd);
+            window[window_index].process_key(ui, cmd);
           break;
         }
         case 'Z':
@@ -309,7 +332,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
           if (window.size() > 0 && window[window_index].get_mode() == Normal) {
             if (window_index > 0) window_index--;
           } else if (window.size() != 0)
-            window[window_index].process_key(cmd);
+            window[window_index].process_key(ui, cmd);
           break;
         }
         case 'X':
@@ -318,11 +341,11 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
           if (window.size() > 0 && window[window_index].get_mode() == Normal) {
             if (window_index < window.size() - 1) window_index++;
           } else if (window.size() != 0)
-            window[window_index].process_key(cmd);
+            window[window_index].process_key(ui, cmd);
           break;
         }
         default: {
-          if (window.size() != 0) window[window_index].process_key(cmd);
+          if (window.size() != 0) window[window_index].process_key(ui, cmd);
           break;
         }
       }
