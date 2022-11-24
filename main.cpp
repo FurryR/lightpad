@@ -29,22 +29,25 @@ void render_default_ui(UI* ui) {
   ui->update();
 }
 std::vector<std::string> help_message = {
-    "--- Lightpad v0.1.0 Help ---",
+    "--- Lightpad v0.1.1 Help ---",
     "",
     "Keys: ",
     "  WASD(NORMAL mode)/Arrow - Move cursor",
     "  i(NORMAL mode) - Switch to INSERT mode",
-    "  Esc(INSERT mode) - Switch to NORMAL mode",
+    "  Esc(INSERT/SELECT mode) - Switch to NORMAL mode",
     "  :(NORMAL mode) - Command",
     "  z(NORMAL mode) - Previous tab",
     "  x(NORMAL mode) - Next tab",
+    "  v(NORMAL mode) - Enter SELECT mode (use WASD/Arrow to select text)",
+    "  Backspace(SELECT mode) - Remove selected text",
     "",
     "Commands: ",
     "  :lang [cpp | js | plain] - Switch renderer for the code",
     "  :w (filename) - Write to file",
     "  :q - Quit/Close current tab",
     "  :q! - Force quit/close current tab (not recommended)",
-    "  :new (filename) - Open a new tab (open filename if filename is specified)",
+    "  :new (filename) - Open a new tab (open filename if filename is "
+    "specified)",
     "  :help - Display this help",
     "",
     "For example, use \":new\" to open a new tab and use \":lang cpp\" to "
@@ -56,7 +59,7 @@ Parser get_command() {
   temp.set(
       ":version",
       [](const std::string&, UI* ui, std::vector<TextArea>*, size_t*) -> bool {
-        ui->show_info("Lightpad v0.1.0 by FurryR");
+        ui->show_info("Lightpad v0.1.1 by FurryR");
         ui->update();
         return false;
       });
@@ -187,7 +190,7 @@ Parser get_command() {
               ui->update();
               return false;
             }
-            std::string filename = (*window_list)[*index].get_filename();
+            const std::string& filename = (*window_list)[*index].get_filename();
             if (!(*window_list)[*index].write(filename)) {
               ui->show_info("E: Write file failed");
               ui->update();
@@ -205,7 +208,7 @@ Parser get_command() {
             } else {
               for (size_t i = 0; i < window_list->size(); i++) {
                 // 如果找到相同的Window，则覆盖，然后删除这个。
-                if ((*window_list)[i].get_filename() == args) {
+                if (i != (*index) && (*window_list)[i].get_filename() == args) {
                   (*window_list)[i] = (*window_list)[*index];
                   size_t backup = *index;
                   (*index) = i;
@@ -258,16 +261,16 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
   Parser parser = get_command();
   UI ui = UI(screen);
   std::vector<TextArea> window;
-  if (args.size() != 0) {
-    window.push_back(open_file(args[0]));
+  for (size_t i = 0; i < args.size(); i++) {
+    window.push_back(open_file(args[i]));
   }
   size_t window_index = 0;
-  // TextArea textarea = TextArea(TomorrowNightBrightCpp::render, text);
   int cmd = 0;
   while (1) {
     if (window.size() > 0) {
       window[window_index].render(&ui,
                                   generate_window_list(window, window_index));
+      ui.update();
     } else {
       render_default_ui(&ui);
     }
@@ -276,7 +279,7 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
       cmd = getch();
       switch (cmd) {
         case ':': {
-          if (window.size() == 0 || window[window_index].get_mode() == Normal) {
+          if (window.size() == 0 || window[window_index].get_mode() == Normal ) {
             // 命令系统
             bool execute = true;
             int tmp;
