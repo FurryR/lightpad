@@ -138,7 +138,8 @@ Parser get_command() {
                     y++) {
                  size_t pos = (*window_list)[*index].get_text()[y].find(arg);
                  if (pos != std::string::npos) {
-                   (*window_list)[*index].set_pos(*ui, Coord(pos, y));
+                   (*window_list)[*index].set_pos(
+                       *ui, Coord(pos + arg.length() - 1, y));
                    (*window_list)[*index].select(
                        Coord(pos, y), Coord(pos + arg.length() - 1, y));
                    return true;
