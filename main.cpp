@@ -32,13 +32,13 @@ std::vector<std::string> help_message = {
     "--- Lightpad v0.1.1 Help ---",
     "",
     "Keys: ",
-    "  WASD(NORMAL mode)/Arrow - Move cursor",
+    "  WSAD(NORMAL mode)/Arrow - Move cursor",
     "  i(NORMAL mode) - Switch to INSERT mode",
     "  Esc(INSERT/SELECT mode) - Switch to NORMAL mode",
     "  :(NORMAL mode) - Command",
     "  z(NORMAL mode) - Previous tab",
     "  x(NORMAL mode) - Next tab",
-    "  v(NORMAL mode) - Enter SELECT mode (use WASD/Arrow to select text)",
+    "  v(NORMAL mode) - Enter SELECT mode (use WSAD/Arrow to select text)",
     "  Backspace(SELECT mode) - Remove selected text",
     "",
     "Commands: ",
@@ -48,7 +48,9 @@ std::vector<std::string> help_message = {
     "  :q! - Force quit/close current tab (not recommended)",
     "  :new (filename) - Open a new tab (open filename if filename is "
     "specified)",
+    "  :find [content] - Searches the file for the first string [content].",
     "  :help - Display this help",
+    "  :version - Display the version of Lightpad",
     "",
     "For example, use \":new\" to open a new tab and use \":lang cpp\" to "
     "switch the renderer.",
@@ -127,6 +129,11 @@ Parser get_command() {
            [](const std::string& arg, UI* ui,
               std::vector<TextArea>* window_list, size_t* index) -> bool {
              if (window_list->size() != 0) {
+               if ((*window_list)[*index].get_readonly()) {
+                 ui->show_info("E: File is read-only");
+                 ui->update();
+                 return false;
+               }
                for (size_t y = 0; y < (*window_list)[*index].get_text().size();
                     y++) {
                  size_t pos = (*window_list)[*index].get_text()[y].find(arg);
