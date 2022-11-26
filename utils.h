@@ -9,9 +9,9 @@
 #include <termios.h>
 #include <unistd.h>
 /**
- * @brief 非阻塞getch IO。
+ * @brief 判断输入流中是否还有字符。此API用于补足kbhit的缺失。
  *
- * @return int -1（未获得输入），或char code。
+ * @return int 0（未获得输入），1（获得输入）。
  */
 int kbhit() {
   struct termios oldt, newt;
@@ -27,9 +27,9 @@ int kbhit() {
   fcntl(STDIN_FILENO, F_SETFL, oldf);
   if (ch != EOF) {
     ungetc(ch, stdin);
-    return ch;
+    return 1;
   }
-  return -1;
+  return 0;
 }
 int getch() {
   struct termios oldt, newt;
