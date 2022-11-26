@@ -85,12 +85,12 @@ void _transfer(wchar_t i, size_t& z, size_t& a) {
   } else
     z = false;
 }
-std::array<std::string, 35> keyword = {
+std::array<std::string, 34> keyword = {
     "this",  "function", "class", "yield",  "async",    "await",      "new",
     "super", "delete",   "void",  "typeof", "in",       "instanceof", "import",
     "break", "continue", "if",    "else",   "switch",   "case",       "default",
     "throw", "try",      "catch", "var",    "let",      "const",      "return",
-    "do",    "while",    "of",    "export", "debugger", "from",       "as"};
+    "do",    "while",    "of",    "export", "debugger", "from"};
 std::array<std::string, 4> literal = {"true", "false", "undefined", "null"};
 ColorText _get_colortext(const std::string& tmp) {
   if (std::find(keyword.cbegin(), keyword.cend(), tmp) != keyword.cend()) {
@@ -153,15 +153,26 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
       tmp = "";
       if (text[i] != '\"' && text[i] != '\'')
         ret.push_back(ColorText(std::string(1, text[i]), _render_color(None)));
-    } else if (std::find(op.cbegin(), op.cend(), text[i]) != op.cend() &&
-               (text[i] != '/' ||
-                !((i + 1 < text.length() &&
-                   (text[i + 1] == '/' || text[i + 1] == '*')) ||
-                  (i >= 1 && text[i - 1] == '/')))) {
-      ret.push_back(_get_colortext(tmp));
-      ret.push_back(
-          ColorText(std::string(1, text[i]), _render_color(Operator)));
-      tmp = "";
+    } else if (std::find(op.cbegin(), op.cend(), text[i]) != op.cend()) {
+      if (text[i] != '/' && text[i] != '*') {
+        ret.push_back(_get_colortext(tmp));
+        ret.push_back(
+            ColorText(std::string(1, text[i]), _render_color(Operator)));
+        tmp = "";
+      } else {
+        if (text[i] == '/' && i + 1 < text.length() &&
+            (text[i + 1] == '*' || text[i + 1] == '/')) {
+          ret.push_back(_get_colortext(tmp));
+          tmp = std::string(1, text[i]);
+        } else if (text[i] == '*' && i > 0 && text[i - 1] == '/') {
+          tmp += text[i];
+        } else {
+          ret.push_back(_get_colortext(tmp));
+          ret.push_back(
+              ColorText(std::string(1, text[i]), _render_color(Operator)));
+          tmp = "";
+        }
+      }
     } else
       tmp += text[i];
   }

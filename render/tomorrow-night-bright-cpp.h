@@ -160,9 +160,6 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
       tmp += text[i];
       continue;
     } else if (tmp == "#" && a == 0) {
-      // ret.push_back(
-      //     ColorText(tmp + text.substr(i), _render_color(PreProcessor)));
-      // tmp = "";
       for (; i < text.length() &&
              (tmp.length() < 2 || tmp.substr(tmp.length() - 2, 2) != "//");
            i++) {
@@ -186,15 +183,26 @@ std::vector<ColorText> _render_one(const std::string& text, bool* status) {
       tmp = "";
       if (text[i] != '\"' && text[i] != '\'')
         ret.push_back(ColorText(std::string(1, text[i]), _render_color(None)));
-    } else if (std::find(op.cbegin(), op.cend(), text[i]) != op.cend() &&
-               (text[i] != '/' ||
-                !((i + 1 < text.length() &&
-                   (text[i + 1] == '/' || text[i + 1] == '*')) ||
-                  (i >= 1 && text[i - 1] == '/')))) {
-      ret.push_back(_get_colortext(tmp));
-      ret.push_back(
-          ColorText(std::string(1, text[i]), _render_color(Operator)));
-      tmp = "";
+    } else if (std::find(op.cbegin(), op.cend(), text[i]) != op.cend()) {
+      if (text[i] != '/' && text[i] != '*') {
+        ret.push_back(_get_colortext(tmp));
+        ret.push_back(
+            ColorText(std::string(1, text[i]), _render_color(Operator)));
+        tmp = "";
+      } else {
+        if (text[i] == '/' && i + 1 < text.length() &&
+            (text[i + 1] == '*' || text[i + 1] == '/')) {
+          ret.push_back(_get_colortext(tmp));
+          tmp = std::string(1, text[i]);
+        } else if (text[i] == '*' && i > 0 && text[i - 1] == '/') {
+          tmp += text[i];
+        } else {
+          ret.push_back(_get_colortext(tmp));
+          ret.push_back(
+              ColorText(std::string(1, text[i]), _render_color(Operator)));
+          tmp = "";
+        }
+      }
     } else
       tmp += text[i];
   }
