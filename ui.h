@@ -479,8 +479,6 @@ typedef class TextArea {
       case '\x1b': {
         // Esc, 方向键
         if (kbhit() && getch() == '[') {
-          // 方向键
-          getch();
           process_arrow(screen, getch());
         } else {
           if (mode == Select) {
