@@ -87,7 +87,7 @@ void _transfer(wchar_t i, size_t& z, size_t& a) {
   } else
     z = false;
 }
-std::array<std::string, 60> keyword = {
+constexpr std::array<const char*, 60> keyword = {
     "bool",          "short",       "int",          "long",
     "float",         "double",      "inline",       "auto",
     "restrict",      "explicit",    "typeid",       "asm",
@@ -103,7 +103,7 @@ std::array<std::string, 60> keyword = {
     "public",        "protected",   "private",      "new",
     "static_assert", "delete",      "sizeof",       "decltype",
     "const_cast",    "static_cast", "dynamic_cast", "reinterpret_cast"};
-std::array<std::string, 4> literal = {"true", "false", "NULL", "nullptr"};
+constexpr std::array<const char*, 4> literal = {"true", "false", "NULL", "nullptr"};
 ColorText _get_colortext(const std::string& tmp) {
   if (std::find(keyword.cbegin(), keyword.cend(), tmp) != keyword.cend()) {
     return ColorText(tmp, _render_color(Keyword));
