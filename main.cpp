@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include <algorithm>
 #include <fstream>
 
@@ -361,16 +363,25 @@ void main_ui(Screen* screen, const std::vector<std::string>& args) {
     }
   }
 }
+termios tm;
+void exit_fn(int) {
+  std::cout << std::endl;
+  tcgetattr(STDIN_FILENO, &tm);
+  tm.c_lflag |= ECHO;
+  tcsetattr(STDIN_FILENO, TCSANOW, &tm);
+  exit(0);
+}
 int main(int argc, char** argv) {
-  termios tm;
+  // termios tm;
   tcgetattr(STDIN_FILENO, &tm);
   tm.c_lflag &= ~ECHO;
   tcsetattr(STDIN_FILENO, TCSANOW, &tm);
+  signal(SIGINT, exit_fn);
+  atexit([]() -> void { exit_fn(0); });
   std::vector<std::string> s(argc - 1);
   for (int i = 1; i < argc; i++) {
     s[i - 1] = argv[i];
   }
-  // std::cout.sync_with_stdio(false);
   Screen screen = Screen(getsize());
   main_ui(&screen, s);
 }
