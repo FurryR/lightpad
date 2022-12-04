@@ -448,7 +448,6 @@ typedef class TextArea {
               text.erase(text.cbegin() + pos.pos().y);
               pos.sub_y();
               pos.set_x(tmp, screen.size().x - 1);
-
             } else {
               text[pos.pos().y] = text[pos.pos().y].substr(0, pos.pos().x - 1) +
                                   text[pos.pos().y].substr(pos.pos().x);

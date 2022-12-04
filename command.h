@@ -2,23 +2,22 @@
 #define _COMMAND_H
 #include <functional>
 #include <map>
+#include <memory>
 
+#include "./awacorn/awacorn.h"
 #include "./ui.h"
-// argument, UI, Window list, index = success(true) | failed(false)
-typedef std::function<bool(const std::string&, UI*, std::vector<TextArea>*,
-                           size_t*)>
+// argument, EventLoop, UI, Window list, index = success(true) | failed(false)
+typedef std::function<bool(const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI>,
+                           std::shared_ptr<std::vector<TextArea>>, std::shared_ptr<size_t>)>
     Command;
-// argument, UI, Window list | return = success(true) | failed(false)
-// typedef std::function<bool(const std::string&, UI*, std::vector<TextArea>*)>
-// StandardCommand;
 typedef class Parser {
   std::map<std::string, Command> cmd;
   Command default_command;
 
  public:
   Parser() {}
-  bool execute(const std::string& command, UI* ui,
-               std::vector<TextArea>* window_list, size_t* index) const {
+  bool execute(const std::string& command, Awacorn::EventLoop* ev, const std::shared_ptr<UI>& ui,
+               const std::shared_ptr<std::vector<TextArea>>& window_list, const std::shared_ptr<size_t>& index) const {
     size_t idx = command.find_first_of(' ');
     std::string name, arg;
     if (idx == std::string::npos) {
@@ -29,10 +28,10 @@ typedef class Parser {
       arg = command.substr(name.length() + 1);
     }
     if (cmd.find(name) != cmd.cend() && cmd.at(name)) {
-      return cmd.at(name)(arg, ui, window_list, index);
+      return cmd.at(name)(arg, ev, ui, window_list, index);
     }
     if (default_command)
-      return default_command(command, ui, window_list, index);
+      return default_command(command, ev, ui, window_list, index);
     return true;
   }
   void set_default(const Command& fn) { default_command = fn; }
