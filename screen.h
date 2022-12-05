@@ -70,6 +70,7 @@ typedef class Screen {
         }
       }
     }
+    dirty = false;
     std::cout << "\x1b[" << _size.y << ";" << _size.x << "H\x1b[0m"
               << std::flush;
   }

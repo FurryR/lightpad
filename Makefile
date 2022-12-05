@@ -1,6 +1,6 @@
 OUTPUT = lightpad
 CXX = g++
-CXXFLAGS = -pipe --std=c++11 -Wall -Wextra -D ENABLE_EXT
+CXXFLAGS = -pipe --std=c++11 -Wall -Wextra
 all : build
 build :
 	@echo "[CXX] main.cpp -> $(OUTPUT)"
