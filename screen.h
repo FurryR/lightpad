@@ -22,46 +22,49 @@ typedef struct Character {
       std::cout << (content == 0 ? ' ' : content);
     }
   }
-  bool operator==(const Character& rhs) const noexcept {
-    return rhs.prefix == prefix && content == rhs.content;
+  bool operator!=(const Character& rhs) const noexcept {
+    return rhs.prefix != prefix || content != rhs.content;
   }
 } Character;
 typedef class Screen {
-  std::vector<std::vector<Character>> buf;
-  std::vector<std::vector<Character>> history;
+  std::vector<std::vector<Character>> current;
+  std::vector<std::vector<Character>> buffer;
   Coord _size;
-  void _init() const { std::cout << "\x1b[2J\x1b[1;1H"; }
+  bool dirty;
+  void _init() const { std::cout << "\x1b[2J"; }
   bool _test(const Coord& pos) const noexcept {
     return pos.x < _size.x && pos.y < _size.y;
   }
 
  public:
   Screen(const Coord& size)
-      : buf(std::vector<std::vector<Character>>(
+      : current(std::vector<std::vector<Character>>(
             size.y, std::vector<Character>(size.x))),
-        history(std::vector<std::vector<Character>>(
+        buffer(std::vector<std::vector<Character>>(
             size.y, std::vector<Character>(size.x))),
-        _size(size) {
+        _size(size),
+        dirty(false) {
     _init();
   }
   void show() {
+    if (!dirty) return;
     bool flag = true;
     std::string str = "";
     for (size_t y = 0; y < _size.y; y++) {
       for (size_t x = 0; x < _size.x; x++) {
-        if (!(buf[y][x] == history[y][x])) {
+        if (current[y][x] != buffer[y][x]) {
           if (flag) {
             std::cout << "\x1b[" << (y + 1) << ";" << (x + 1) << "H";
             flag = false;
           }
-          if (str != buf[y][x].prefix) {
+          if (str != current[y][x].prefix) {
             std::cout << "\x1b[0m";
-            str = buf[y][x].prefix;
-            buf[y][x].output(true);
+            str = current[y][x].prefix;
+            current[y][x].output(true);
           } else {
-            buf[y][x].output(false);
+            current[y][x].output(false);
           }
-          history[y][x] = buf[y][x];
+          buffer[y][x] = current[y][x];
         } else {
           flag = true;
         }
@@ -73,13 +76,16 @@ typedef class Screen {
   void clear() {
     for (size_t y = 0; y < _size.y; y++) {
       for (size_t x = 0; x < _size.x; x++) {
-        buf[y][x] = Character();
+        current[y][x] = Character();
       }
     }
   }
   bool set(const Coord& pos, const Character& chr) {
     if (!_test(pos)) return false;
-    buf[pos.y][pos.x] = chr;
+    if (current[pos.y][pos.x] != chr) {
+      dirty = true;
+      current[pos.y][pos.x] = chr;
+    }
     return true;
   }
   const Coord& size() const noexcept { return _size; }
