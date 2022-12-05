@@ -64,7 +64,7 @@ Parser get_command() {
            [](const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
               std::shared_ptr<std::vector<TextArea>>,
               std::shared_ptr<size_t>) -> bool {
-             ui->show_info("Lightpad v0.1.1 by FurryR");
+             ui->show_info("Lightpad v0.2.0 by FurryR");
              ui->update();
              return false;
            });
