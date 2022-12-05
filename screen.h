@@ -75,6 +75,7 @@ typedef class Screen {
               << std::flush;
   }
   void clear() {
+    dirty = true;
     for (size_t y = 0; y < _size.y; y++) {
       for (size_t x = 0; x < _size.x; x++) {
         current[y][x] = Character();
