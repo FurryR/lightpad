@@ -31,7 +31,7 @@ void render_default_ui(UI* ui) {
   ui->update();
 }
 const std::vector<std::string> help_message = {
-    "--- Lightpad v0.1.1 Help ---",
+    "--- Lightpad v0.2.0 Help ---",
     "",
     "Keys: ",
     "  WSAD(NORMAL mode)/Arrow - Move cursor",
