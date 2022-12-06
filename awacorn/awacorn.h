@@ -22,9 +22,9 @@ struct _Event {
   /**
    * @brief 对于 Interval 是循环间隔，对于 Event 无效。
    */
-  std::chrono::system_clock::duration timeout;
+  std::chrono::high_resolution_clock::duration timeout;
   explicit _Event(const Fn& fn,
-                  const std::chrono::system_clock::duration& timeout)
+                  const std::chrono::high_resolution_clock::duration& timeout)
       : fn(fn), timeout(timeout) {}
 };
 /**
@@ -47,7 +47,7 @@ struct Interval : public _Event<Interval> {
    */
   bool pending;
   explicit Interval(const Fn& fn,
-                    const std::chrono::system_clock::duration& timeout)
+                    const std::chrono::high_resolution_clock::duration& timeout)
       : _Event<Interval>(fn, timeout), ev(nullptr), pending(true) {}
 };
 /**
@@ -86,8 +86,8 @@ typedef class EventLoop {
       if (min == _event.end() || it->timeout < min->timeout) min = it;
     }
     if (min != _event.cend()) {
-      std::chrono::system_clock::duration duration;
-      if (min->timeout != std::chrono::system_clock::duration(0)) {
+      std::chrono::high_resolution_clock::duration duration;
+      if (min->timeout != std::chrono::high_resolution_clock::duration(0)) {
         struct timespec ts;
         ts.tv_sec =
             std::chrono::duration_cast<std::chrono::nanoseconds>(min->timeout)
@@ -103,8 +103,8 @@ typedef class EventLoop {
            it++)
         it->timeout = it->timeout > duration
                           ? (it->timeout - duration)
-                          : std::chrono::system_clock::duration(0);
-      std::chrono::system_clock::time_point start =
+                          : std::chrono::high_resolution_clock::duration(0);
+      std::chrono::high_resolution_clock::time_point start =
           std::chrono::high_resolution_clock::now();
       min->fn(this, &(*min)), _event.erase(min);
       duration = start.time_since_epoch();
@@ -112,7 +112,7 @@ typedef class EventLoop {
            it++)
         it->timeout = it->timeout > duration
                           ? (it->timeout - duration)
-                          : std::chrono::system_clock::duration(0);
+                          : std::chrono::high_resolution_clock::duration(0);
     }
   }
   template <typename T>
@@ -140,7 +140,7 @@ typedef class EventLoop {
                       const std::chrono::duration<Rep, Period>& tm) {
     return _create<Event>(
         Event(fn,
-              std::chrono::duration_cast<std::chrono::system_clock::duration>(
+              std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
                   tm)),
         &_event);
   }
@@ -156,7 +156,7 @@ typedef class EventLoop {
                          const std::chrono::duration<Rep, Period>& tm) {
     return _create<Interval>(
         Interval(
-            fn, std::chrono::duration_cast<std::chrono::system_clock::duration>(
+            fn, std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
                     tm)),
         &_intv);
   }
