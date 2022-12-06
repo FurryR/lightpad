@@ -89,8 +89,14 @@ typedef class EventLoop {
       std::chrono::system_clock::duration duration;
       if (min->timeout != std::chrono::system_clock::duration(0)) {
         struct timespec ts;
-        ts.tv_sec = min->timeout.count() / 1000000000;
-        ts.tv_nsec = min->timeout.count() % 1000000000;
+        ts.tv_sec =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(min->timeout)
+                .count() /
+            1000000000;
+        ts.tv_nsec =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(min->timeout)
+                .count() %
+            1000000000;
         nanosleep(&ts, nullptr);
       }
       for (std::list<Event>::iterator it = _event.begin(); it != _event.end();
