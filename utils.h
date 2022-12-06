@@ -92,6 +92,6 @@ Promise::Promise<int> async_getch(Awacorn::EventLoop* ev) {
           ev->clear(fn);
         }
       },
-      10000);
+      std::chrono::milliseconds(10));
   return pm;
 }

@@ -326,7 +326,7 @@ void main_ui(Awacorn::EventLoop* ev, Screen* screen,
           }
         }
       },
-      7000);
+      std::chrono::milliseconds(7));
   std::shared_ptr<std::function<Promise::Promise<void>(int)>> callback(
       new std::function<Promise::Promise<void>(int)>());
   *callback = [parser, callback, ev, window, window_index, ui, display,

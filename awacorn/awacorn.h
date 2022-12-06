@@ -4,11 +4,10 @@
  * Project Awacorn 基于 MIT 协议开源。
  * Copyright(c) 凌 2022.
  */
-#include <time.h>
-#include <unistd.h>
-
+#include <chrono>
 #include <functional>
 #include <list>
+
 namespace Awacorn {
 template <typename T>
 struct _Event {
@@ -23,8 +22,8 @@ struct _Event {
   /**
    * @brief 对于 Interval 是循环间隔，对于 Event 无效。
    */
-  useconds_t timeout;
-  explicit _Event(const Fn& fn, useconds_t timeout)
+  std::chrono::nanoseconds timeout;
+  explicit _Event(const Fn& fn, const std::chrono::nanoseconds& timeout)
       : fn(fn), timeout(timeout) {}
 };
 /**
@@ -46,7 +45,7 @@ struct Interval : public _Event<Interval> {
    * Interval 仍未被加入事件循环。
    */
   bool pending;
-  explicit Interval(const Fn& fn, useconds_t timeout)
+  explicit Interval(const Fn& fn, const std::chrono::nanoseconds& timeout)
       : _Event<Interval>(fn, timeout), ev(nullptr), pending(true) {}
 };
 /**
@@ -85,18 +84,25 @@ typedef class EventLoop {
       if (min == _event.end() || it->timeout < min->timeout) min = it;
     }
     if (min != _event.cend()) {
-      useconds_t duration = 0;
-      if (min->timeout != 0) usleep(duration = min->timeout);
+      std::chrono::nanoseconds duration;
+      if (min->timeout != std::chrono::nanoseconds(0)) {
+        struct timespec ts;
+        ts.tv_sec = min->timeout.count() / 1000000000;
+        ts.tv_nsec = min->timeout.count() % 1000000000;
+        nanosleep(&ts, nullptr);
+      }
       for (std::list<Event>::iterator it = _event.begin(); it != _event.end();
            it++)
-        it->timeout = it->timeout > duration ? (it->timeout - duration) : 0;
-      clock_t start = clock();
+        it->timeout = it->timeout > duration ? (it->timeout - duration)
+                                             : std::chrono::nanoseconds(0);
+      std::chrono::system_clock::time_point start =
+          std::chrono::high_resolution_clock::now();
       min->fn(this, &(*min)), _event.erase(min);
-      duration =
-          double(clock() - start) / CLOCKS_PER_SEC * 1000000;  // 换算为us
+      duration = start.time_since_epoch();
       for (std::list<Event>::iterator it = _event.begin(); it != _event.end();
            it++)
-        it->timeout = it->timeout > duration ? (it->timeout - duration) : 0;
+        it->timeout = it->timeout > duration ? (it->timeout - duration)
+                                             : std::chrono::nanoseconds(0);
     }
   }
   template <typename T>
@@ -116,21 +122,29 @@ typedef class EventLoop {
    * @brief 创建定时事件。
    *
    * @param fn 事件函数。
-   * @param tm 指定事件触发的时间(us)。
+   * @param tm 指定事件触发的时间。
    * @return const Event* 事件的标识，可用于clear。
    */
-  const Event* create(const Event::Fn& fn, useconds_t tm) {
-    return _create<Event>(Event(fn, tm), &_event);
+  template <typename Rep, typename Period>
+  const Event* create(const Event::Fn& fn,
+                      const std::chrono::duration<Rep, Period>& tm) {
+    return _create<Event>(
+        Event(fn, std::chrono::duration_cast<std::chrono::nanoseconds>(tm)),
+        &_event);
   }
   /**
    * @brief 创建循环事件。
    *
    * @param fn 事件函数。
-   * @param tm 指定事件触发的时间(us)。
+   * @param tm 指定事件触发的时间。
    * @return const Interval* 事件的标识，可用于clear。
    */
-  const Interval* create(const Interval::Fn& fn, useconds_t tm) {
-    return _create<Interval>(Interval(fn, tm), &_intv);
+  template <typename Rep, typename Period>
+  const Interval* create(const Interval::Fn& fn,
+                         const std::chrono::duration<Rep, Period>& tm) {
+    return _create<Interval>(
+        Interval(fn, std::chrono::duration_cast<std::chrono::nanoseconds>(tm)),
+        &_intv);
   }
   /**
    * @brief 删除即将发生的事件。
