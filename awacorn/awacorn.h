@@ -90,13 +90,13 @@ typedef class EventLoop {
       if (min->timeout != std::chrono::high_resolution_clock::duration(0)) {
         struct timespec ts;
         ts.tv_sec =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(min->timeout)
-                .count() /
-            1000000000;
+            std::chrono::duration_cast<std::chrono::seconds>(min->timeout)
+                .count();
         ts.tv_nsec =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(min->timeout)
-                .count() %
-            1000000000;
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                min->timeout -
+                std::chrono::duration_cast<std::chrono::seconds>(min->timeout))
+                .count();
         nanosleep(&ts, nullptr);
       }
       for (std::list<Event>::iterator it = _event.begin(); it != _event.end();
@@ -107,7 +107,7 @@ typedef class EventLoop {
       std::chrono::high_resolution_clock::time_point start =
           std::chrono::high_resolution_clock::now();
       min->fn(this, &(*min)), _event.erase(min);
-      duration = start.time_since_epoch();
+      duration = std::chrono::high_resolution_clock::now() - start;
       for (std::list<Event>::iterator it = _event.begin(); it != _event.end();
            it++)
         it->timeout = it->timeout > duration
@@ -139,9 +139,8 @@ typedef class EventLoop {
   const Event* create(const Event::Fn& fn,
                       const std::chrono::duration<Rep, Period>& tm) {
     return _create<Event>(
-        Event(fn,
-              std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
-                  tm)),
+        Event(fn, std::chrono::duration_cast<
+                      std::chrono::high_resolution_clock::duration>(tm)),
         &_event);
   }
   /**
@@ -155,9 +154,8 @@ typedef class EventLoop {
   const Interval* create(const Interval::Fn& fn,
                          const std::chrono::duration<Rep, Period>& tm) {
     return _create<Interval>(
-        Interval(
-            fn, std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
-                    tm)),
+        Interval(fn, std::chrono::duration_cast<
+                         std::chrono::high_resolution_clock::duration>(tm)),
         &_intv);
   }
   /**
