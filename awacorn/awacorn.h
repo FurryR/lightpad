@@ -86,16 +86,15 @@ typedef class EventLoop {
       if (min == _event.end() || it->timeout < min->timeout) min = it;
     }
     if (min != _event.cend()) {
-      std::chrono::high_resolution_clock::duration duration;
-      if (min->timeout != std::chrono::high_resolution_clock::duration(0)) {
+      std::chrono::high_resolution_clock::duration duration = min->timeout;
+      if (duration != std::chrono::high_resolution_clock::duration(0)) {
         struct timespec ts;
         ts.tv_sec =
-            std::chrono::duration_cast<std::chrono::seconds>(min->timeout)
-                .count();
+            std::chrono::duration_cast<std::chrono::seconds>(duration).count();
         ts.tv_nsec =
             std::chrono::duration_cast<std::chrono::nanoseconds>(
-                min->timeout -
-                std::chrono::duration_cast<std::chrono::seconds>(min->timeout))
+                duration -
+                std::chrono::duration_cast<std::chrono::seconds>(duration))
                 .count();
         nanosleep(&ts, nullptr);
       }
