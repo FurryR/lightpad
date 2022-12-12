@@ -23,7 +23,8 @@ typedef struct Character {
     }
   }
   bool operator!=(const Character& rhs) const noexcept {
-    return rhs.prefix != prefix || content != rhs.content;
+    return rhs.prefix != prefix || ((content == 0 ? ' ' : content) !=
+                                    (rhs.content == 0 ? ' ' : rhs.content));
   }
 } Character;
 typedef class Screen {
