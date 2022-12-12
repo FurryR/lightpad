@@ -1,0 +1,3 @@
+[submodule "awacorn"]
+	path = awacorn
+	url = https://github.com/FurryR/Awacorn
