@@ -302,101 +302,104 @@ std::string generate_window_list(const std::vector<TextArea>& window,
   }
   return ret;
 }
-void main_ui(Awacorn::EventLoop* ev, Screen* screen,
-             const std::vector<std::string>& args) {
-  std::shared_ptr<Parser> parser(new Parser(get_command()));
-  std::shared_ptr<UI> ui(new UI(screen));
-  std::shared_ptr<std::vector<TextArea>> window(new std::vector<TextArea>());
-  for (size_t i = 0; i < args.size(); i++) {
-    window->push_back(open_file(args[i]));
-  }
-  std::shared_ptr<bool> flag(new bool(true));
-  std::shared_ptr<size_t> window_index(new size_t(0));
-  // int cmd = 0;
-  const Awacorn::Interval* display = ev->create(
-      [window, ui, window_index, flag](Awacorn::EventLoop*,
-                                       const Awacorn::Interval*) -> void {
-        if (*flag) {
-          if (window->size() > 0) {
-            (*window)[*window_index].render(
-                &(*ui), generate_window_list(*window, *window_index));
-            ui->update();
-          } else {
-            render_default_ui(&(*ui));
-          }
-        }
-      },
-      std::chrono::milliseconds(7));
-  std::shared_ptr<std::function<Promise::Promise<void>(int)>> callback(
-      new std::function<Promise::Promise<void>(int)>());
-  *callback = [parser, callback, ev, window, window_index, ui, display,
-               flag](int cmd) {
-    *flag = true;
-    switch (cmd) {
-      case ':': {
-        if (window->size() == 0 ||
-            (*window)[*window_index].get_mode() == Normal) {
-          // 命令系统
-          *flag = false;
-          std::shared_ptr<std::string> tmp(new std::string(":"));
-          ui->show_info(*tmp);
-          ui->update();
-          std::shared_ptr<std::function<Promise::Promise<void>(int)>>
-              cmd_callback(new std::function<Promise::Promise<void>(int)>());
-          *cmd_callback = [flag, parser, ui, cmd_callback, tmp, ev, window,
-                           window_index](int key) {
-            if (key == '\n') {
-              *flag = parser->execute(*tmp, ev, ui, window, window_index);
-              return Promise::resolve<void>();
-            } else if (key == '\x1b') {
-              *flag = true;
-              return Promise::resolve<void>();
-            } else if (key == 127) {
-              if (tmp->length() > 1) tmp->pop_back();
+Awacorn::AsyncFn<Promise::Promise<void>> main_ui(
+    Screen* screen, const std::vector<std::string>& args) {
+  return [screen, args](Awacorn::EventLoop* ev) {
+    std::shared_ptr<Parser> parser(new Parser(get_command()));
+    std::shared_ptr<UI> ui(new UI(screen));
+    std::shared_ptr<std::vector<TextArea>> window(new std::vector<TextArea>());
+    for (size_t i = 0; i < args.size(); i++) {
+      window->push_back(open_file(args[i]));
+    }
+    std::shared_ptr<bool> flag(new bool(true));
+    std::shared_ptr<size_t> window_index(new size_t(0));
+    // int cmd = 0;
+    const Awacorn::Interval* display = ev->create(
+        [window, ui, window_index, flag](Awacorn::EventLoop*,
+                                         const Awacorn::Interval*) -> void {
+          if (*flag) {
+            if (window->size() > 0) {
+              (*window)[*window_index].render(
+                  &(*ui), generate_window_list(*window, *window_index));
+              ui->update();
             } else {
-              *tmp += key;
+              render_default_ui(&(*ui));
             }
+          }
+        },
+        std::chrono::milliseconds(7));
+    std::shared_ptr<std::function<Promise::Promise<void>(int)>> callback(
+        new std::function<Promise::Promise<void>(int)>());
+    *callback = [parser, callback, ev, window, window_index, ui, display,
+                 flag](int cmd) {
+      *flag = true;
+      switch (cmd) {
+        case ':': {
+          if (window->size() == 0 ||
+              (*window)[*window_index].get_mode() == Normal) {
+            // 命令系统
+            *flag = false;
+            std::shared_ptr<std::string> tmp(new std::string(":"));
             ui->show_info(*tmp);
             ui->update();
-            return async_getch(ev).then<void>(*cmd_callback);
-          };
-          return async_getch(ev)
-              .then<void>(*cmd_callback)
-              .then<void>([ev, callback]() {
-                return async_getch(ev).then<void>(*callback);
-              });
-        } else if (window->size() != 0)
-          (*window)[*window_index].process_key(*ui, cmd);
-        break;
+            std::shared_ptr<std::function<Promise::Promise<void>(int)>>
+                cmd_callback(new std::function<Promise::Promise<void>(int)>());
+            *cmd_callback = [flag, parser, ui, cmd_callback, tmp, ev, window,
+                             window_index](int key) {
+              if (key == '\n') {
+                *flag = parser->execute(*tmp, ev, ui, window, window_index);
+                return Promise::resolve<void>();
+              } else if (key == '\x1b') {
+                *flag = true;
+                return Promise::resolve<void>();
+              } else if (key == 127) {
+                if (tmp->length() > 1) tmp->pop_back();
+              } else {
+                *tmp += key;
+              }
+              ui->show_info(*tmp);
+              ui->update();
+              return ev->run(async_getch()).then<void>(*cmd_callback);
+            };
+            return ev->run(async_getch())
+                .then<void>(*cmd_callback)
+                .then<void>([ev, callback]() {
+                  return ev->run(async_getch()).then<void>(*callback);
+                });
+          } else if (window->size() != 0)
+            (*window)[*window_index].process_key(*ui, cmd);
+          break;
+        }
+        case 'Z':
+        case 'z': {
+          // 上一个窗口
+          if (window->size() > 0 &&
+              (*window)[*window_index].get_mode() == Normal) {
+            if ((*window_index) > 0) (*window_index)--;
+          } else if (window->size() != 0)
+            (*window)[*window_index].process_key(*ui, cmd);
+          break;
+        }
+        case 'X':
+        case 'x': {
+          // 下一个窗口
+          if (window->size() > 0 &&
+              (*window)[*window_index].get_mode() == Normal) {
+            if ((*window_index) < window->size() - 1) (*window_index)++;
+          } else if (window->size() != 0)
+            (*window)[*window_index].process_key(*ui, cmd);
+          break;
+        }
+        default: {
+          if (window->size() != 0)
+            (*window)[*window_index].process_key(*ui, cmd);
+          break;
+        }
       }
-      case 'Z':
-      case 'z': {
-        // 上一个窗口
-        if (window->size() > 0 &&
-            (*window)[*window_index].get_mode() == Normal) {
-          if ((*window_index) > 0) (*window_index)--;
-        } else if (window->size() != 0)
-          (*window)[*window_index].process_key(*ui, cmd);
-        break;
-      }
-      case 'X':
-      case 'x': {
-        // 下一个窗口
-        if (window->size() > 0 &&
-            (*window)[*window_index].get_mode() == Normal) {
-          if ((*window_index) < window->size() - 1) (*window_index)++;
-        } else if (window->size() != 0)
-          (*window)[*window_index].process_key(*ui, cmd);
-        break;
-      }
-      default: {
-        if (window->size() != 0) (*window)[*window_index].process_key(*ui, cmd);
-        break;
-      }
-    }
-    return async_getch(ev).then<void>(*callback);
+      return ev->run(async_getch()).then<void>(*callback);
+    };
+    return ev->run(async_getch()).then<void>(*callback);
   };
-  async_getch(ev).then<void>(*callback);
 }
 termios tm;
 void exit_fn(int) {
@@ -419,6 +422,6 @@ int main(int argc, char** argv) {
     s[i - 1] = argv[i];
   }
   Screen screen = Screen(getsize());
-  main_ui(&ev, &screen, s);
+  ev.run(main_ui(&screen, s));
   ev.start();
 }

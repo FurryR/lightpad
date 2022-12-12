@@ -1,13 +1,13 @@
 #ifndef _UTILS_H
 #define _UTILS_H
+#include <termios.h>
+#include <unistd.h>
+
 #include <iostream>
 
 #include "./awacorn/awacorn.h"
 #include "./awacorn/promise.h"
 #include "./screen.h"
-
-#include <termios.h>
-#include <unistd.h>
 /**
  * @brief 判断输入流中是否还有字符。此API用于补足kbhit的缺失。
  *
@@ -53,16 +53,18 @@ Coord getsize() {
     ;
   return ret;
 }
-Promise::Promise<int> async_getch(Awacorn::EventLoop* ev) {
-  Promise::Promise<int> pm;
-  ev->create(
-      [pm](Awacorn::EventLoop* ev, const Awacorn::Interval* fn) -> void {
-        if (kbhit()) {
-          pm.resolve(getch());
-          ev->clear(fn);
-        }
-      },
-      std::chrono::milliseconds(10));
-  return pm;
+Awacorn::AsyncFn<Promise::Promise<int>> async_getch() {
+  return [](Awacorn::EventLoop* ev) {
+    Promise::Promise<int> pm;
+    ev->create(
+        [pm](Awacorn::EventLoop* ev, const Awacorn::Interval* fn) -> void {
+          if (kbhit()) {
+            pm.resolve(getch());
+            ev->clear(fn);
+          }
+        },
+        std::chrono::milliseconds(10));
+    return pm;
+  };
 }
 #endif
