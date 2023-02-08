@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 
+#include "./awacorn/generator.h"
 #include "./command.h"
 #include "./render/tomorrow-night-bright-cpp.h"
 #include "./render/tomorrow-night-bright-js.h"
@@ -61,45 +62,41 @@ const std::vector<std::string> help_message = {
 Parser get_command() {
   Parser temp;
   temp.set(":version",
-           [](const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
-              std::shared_ptr<std::vector<TextArea>>,
-              std::shared_ptr<size_t>) -> bool {
+           [](const std::string&, Awacorn::EventLoop*, UI* ui,
+              std::vector<TextArea>*, size_t*) -> bool {
              ui->show_info("Lightpad v0.2.0 by FurryR");
              ui->update();
              return false;
            });
-  temp.set(
-      ":lang",
-      [](const std::string& arg, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
-         std::shared_ptr<std::vector<TextArea>> window_list,
-         std::shared_ptr<size_t> index) -> bool {
-        if (window_list->size() != 0) {
-          if (arg == "cpp") {
-            (*window_list)[*index].switch_renderer(
-                TomorrowNightBrightCpp::render);
-            return true;
-          } else if (arg == "js") {
-            (*window_list)[*index].switch_renderer(
-                TomorrowNightBrightJs::render);
-            return true;
-          } else if (arg == "plain") {
-            (*window_list)[*index].switch_renderer(PlainText::render);
-            return true;
-          } else {
-            ui->show_info("E: Unknown language");
-            ui->update();
-            return false;
-          }
-        } else {
-          ui->show_info("E: No tabs available");
-          ui->update();
-          return false;
-        }
-      });
+  temp.set(":lang",
+           [](const std::string& arg, Awacorn::EventLoop*, UI* ui,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
+             if (window_list->size() != 0) {
+               if (arg == "cpp") {
+                 (*window_list)[*index].switch_renderer(
+                     TomorrowNightBrightCpp::render);
+                 return true;
+               } else if (arg == "js") {
+                 (*window_list)[*index].switch_renderer(
+                     TomorrowNightBrightJs::render);
+                 return true;
+               } else if (arg == "plain") {
+                 (*window_list)[*index].switch_renderer(PlainText::render);
+                 return true;
+               } else {
+                 ui->show_info("E: Unknown language");
+                 ui->update();
+                 return false;
+               }
+             } else {
+               ui->show_info("E: No tabs available");
+               ui->update();
+               return false;
+             }
+           });
   temp.set(":q",
-           [](const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
-              std::shared_ptr<std::vector<TextArea>> window_list,
-              std::shared_ptr<size_t> index) -> bool {
+           [](const std::string&, Awacorn::EventLoop*, UI* ui,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
              if (window_list->size() != 0) {
                if ((*window_list)[*index].is_changed()) {
                  ui->show_info("E: No write since last change (:q! overrides)");
@@ -118,9 +115,8 @@ Parser get_command() {
              }
            });
   temp.set(":q!",
-           [](const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
-              std::shared_ptr<std::vector<TextArea>> window_list,
-              std::shared_ptr<size_t> index) -> bool {
+           [](const std::string&, Awacorn::EventLoop*, UI* ui,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
              if (window_list->size() != 0) {
                window_list->erase(window_list->begin() + (*index));
                if ((*index) != 0) (*index)--;
@@ -132,41 +128,38 @@ Parser get_command() {
                return true;
              }
            });
-  temp.set(
-      ":find",
-      [](const std::string& arg, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
-         std::shared_ptr<std::vector<TextArea>> window_list,
-         std::shared_ptr<size_t> index) -> bool {
-        if (window_list->size() != 0) {
-          if ((*window_list)[*index].get_readonly()) {
-            ui->show_info("E: File is read-only");
-            ui->update();
-            return false;
-          }
-          for (size_t y = 0; y < (*window_list)[*index].get_text().size();
-               y++) {
-            size_t pos = (*window_list)[*index].get_text()[y].find(arg);
-            if (pos != std::string::npos) {
-              (*window_list)[*index].set_pos(*ui,
-                                             Coord(pos + arg.length() - 1, y));
-              (*window_list)[*index].select(Coord(pos, y),
-                                            Coord(pos + arg.length() - 1, y));
-              return true;
-            }
-          }
-          ui->show_info("E: Nothing matched");
-          ui->update();
-          return false;
-        } else {
-          ui->show_info("E: No tabs available");
-          ui->update();
-          return false;
-        }
-      });
+  temp.set(":find",
+           [](const std::string& arg, Awacorn::EventLoop*, UI* ui,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
+             if (window_list->size() != 0) {
+               if ((*window_list)[*index].get_readonly()) {
+                 ui->show_info("E: File is read-only");
+                 ui->update();
+                 return false;
+               }
+               for (size_t y = 0; y < (*window_list)[*index].get_text().size();
+                    y++) {
+                 size_t pos = (*window_list)[*index].get_text()[y].find(arg);
+                 if (pos != std::string::npos) {
+                   (*window_list)[*index].set_pos(
+                       *ui, Coord(pos + arg.length() - 1, y));
+                   (*window_list)[*index].select(
+                       Coord(pos, y), Coord(pos + arg.length() - 1, y));
+                   return true;
+                 }
+               }
+               ui->show_info("E: Nothing matched");
+               ui->update();
+               return false;
+             } else {
+               ui->show_info("E: No tabs available");
+               ui->update();
+               return false;
+             }
+           });
   temp.set(":help",
-           [](const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI>,
-              std::shared_ptr<std::vector<TextArea>> window_list,
-              std::shared_ptr<size_t> index) -> bool {
+           [](const std::string&, Awacorn::EventLoop*, UI*,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
              if (window_list->size() == 0) {
                window_list->push_back(
                    TextArea(PlainText::render, help_message, true));
@@ -180,9 +173,8 @@ Parser get_command() {
              }
            });
   temp.set(":new",
-           [](const std::string& args, Awacorn::EventLoop*, std::shared_ptr<UI>,
-              std::shared_ptr<std::vector<TextArea>> window_list,
-              std::shared_ptr<size_t> index) -> bool {
+           [](const std::string& args, Awacorn::EventLoop*, UI*,
+              std::vector<TextArea>* window_list, size_t* index) -> bool {
              if (window_list->size() == 0) {
                if (args == "")
                  window_list->push_back(TextArea(
@@ -214,9 +206,8 @@ Parser get_command() {
            });
   temp.set(
       ":w",
-      [](const std::string& args, Awacorn::EventLoop*, std::shared_ptr<UI> ui,
-         std::shared_ptr<std::vector<TextArea>> window_list,
-         std::shared_ptr<size_t> index) -> bool {
+      [](const std::string& args, Awacorn::EventLoop*, UI* ui,
+         std::vector<TextArea>* window_list, size_t* index) -> bool {
         if (window_list->size() == 0) {
           ui->show_info("E: No tabs available");
           ui->update();
@@ -271,10 +262,8 @@ Parser get_command() {
           return true;
         }
       });
-  temp.set_default([](const std::string&, Awacorn::EventLoop*,
-                      std::shared_ptr<UI> ui,
-                      std::shared_ptr<std::vector<TextArea>>,
-                      std::shared_ptr<size_t>) -> bool {
+  temp.set_default([](const std::string&, Awacorn::EventLoop*, UI* ui,
+                      std::vector<TextArea>*, size_t*) -> bool {
     ui->show_info("E: Unknown lightpad command");
     ui->update();
     return false;
@@ -305,100 +294,96 @@ std::string generate_window_list(const std::vector<TextArea>& window,
 Awacorn::AsyncFn<Promise::Promise<void>> main_ui(
     Screen* screen, const std::vector<std::string>& args) {
   return [screen, args](Awacorn::EventLoop* ev) {
-    std::shared_ptr<Parser> parser(new Parser(get_command()));
-    std::shared_ptr<UI> ui(new UI(screen));
-    std::shared_ptr<std::vector<TextArea>> window(new std::vector<TextArea>());
-    for (size_t i = 0; i < args.size(); i++) {
-      window->push_back(open_file(args[i]));
-    }
-    std::shared_ptr<bool> flag(new bool(true));
-    std::shared_ptr<size_t> window_index(new size_t(0));
-    // int cmd = 0;
-    const Awacorn::Interval* display = ev->create(
-        [window, ui, window_index, flag](Awacorn::EventLoop*,
-                                         const Awacorn::Interval*) -> void {
-          if (*flag) {
-            if (window->size() > 0) {
-              (*window)[*window_index].render(
-                  &(*ui), generate_window_list(*window, *window_index));
-              ui->update();
-            } else {
-              render_default_ui(&(*ui));
-            }
-          }
-        },
-        std::chrono::milliseconds(7));
-    std::shared_ptr<std::function<Promise::Promise<void>(int)>> callback(
-        new std::function<Promise::Promise<void>(int)>());
-    *callback = [parser, callback, ev, window, window_index, ui, display,
-                 flag](int cmd) {
-      *flag = true;
-      switch (cmd) {
-        case ':': {
-          if (window->size() == 0 ||
-              (*window)[*window_index].get_mode() == Normal) {
-            // 命令系统
-            *flag = false;
-            std::shared_ptr<std::string> tmp(new std::string(":"));
-            ui->show_info(*tmp);
-            ui->update();
-            std::shared_ptr<std::function<Promise::Promise<void>(int)>>
-                cmd_callback(new std::function<Promise::Promise<void>(int)>());
-            *cmd_callback = [flag, parser, ui, cmd_callback, tmp, ev, window,
-                             window_index](int key) {
-              if (key == '\n') {
-                *flag = parser->execute(*tmp, ev, ui, window, window_index);
-                return Promise::resolve<void>();
-              } else if (key == '\x1b') {
-                *flag = true;
-                return Promise::resolve<void>();
-              } else if (key == 127) {
-                if (tmp->length() > 1) tmp->pop_back();
-              } else {
-                *tmp += key;
-              }
-              ui->show_info(*tmp);
-              ui->update();
-              return ev->run(async_getch()).then<void>(*cmd_callback);
-            };
-            return ev->run(async_getch())
-                .then<void>(*cmd_callback)
-                .then<void>([ev, callback]() {
-                  return ev->run(async_getch()).then<void>(*callback);
-                });
-          } else if (window->size() != 0)
-            (*window)[*window_index].process_key(*ui, cmd);
-          break;
-        }
-        case 'Z':
-        case 'z': {
-          // 上一个窗口
-          if (window->size() > 0 &&
-              (*window)[*window_index].get_mode() == Normal) {
-            if ((*window_index) > 0) (*window_index)--;
-          } else if (window->size() != 0)
-            (*window)[*window_index].process_key(*ui, cmd);
-          break;
-        }
-        case 'X':
-        case 'x': {
-          // 下一个窗口
-          if (window->size() > 0 &&
-              (*window)[*window_index].get_mode() == Normal) {
-            if ((*window_index) < window->size() - 1) (*window_index)++;
-          } else if (window->size() != 0)
-            (*window)[*window_index].process_key(*ui, cmd);
-          break;
-        }
-        default: {
-          if (window->size() != 0)
-            (*window)[*window_index].process_key(*ui, cmd);
-          break;
-        }
-      }
-      return ev->run(async_getch()).then<void>(*callback);
-    };
-    return ev->run(async_getch()).then<void>(*callback);
+    return Generator::AsyncGenerator<void>(
+               [ev, screen,
+                args](Generator::AsyncGenerator<void>::Context* ctx) {
+                 Parser parser = get_command();
+                 UI ui(screen);
+                 std::vector<TextArea> window{};
+                 size_t window_index = 0;
+                 int cmd = 0;
+                 bool flag = true;
+                 for (size_t i = 0; i < args.size(); i++) {
+                   window.push_back(open_file(args[i]));
+                 }
+                 ev->create(
+                     [&window, &ui, &window_index, &flag](
+                         Awacorn::EventLoop*,
+                         const Awacorn::Interval*) -> void {
+                       if (flag) {
+                         if (window.size() > 0) {
+                           window[window_index].render(
+                               &ui, generate_window_list(window, window_index));
+                           ui.update();
+                         } else {
+                           render_default_ui(&ui);
+                         }
+                       }
+                     },
+                     std::chrono::milliseconds(7));
+                 while (1) {
+                   cmd = ctx->await(ev->run(async_getch()));
+                   flag = true;
+                   switch (cmd) {
+                     case ':': {
+                       if (window.size() == 0 ||
+                           window[window_index].get_mode() == Normal) {
+                         // 命令系统
+                         flag = false;
+                         std::string tmp(":");
+                         int key = 0;
+                         ui.show_info(tmp);
+                         ui.update();
+                         while (1) {
+                           key = ctx->await(ev->run(async_getch()));
+                           if (key == '\n') {
+                             flag = parser.execute(tmp, ev, &ui, &window,
+                                                   &window_index);
+                             break;
+                           } else if (key == '\x1b') {
+                             flag = true;
+                             break;
+                           } else if (key == 127) {
+                             if (tmp.length() > 1) tmp.pop_back();
+                           } else {
+                             tmp += key;
+                           }
+                           ui.show_info(tmp);
+                           ui.update();
+                         }
+                       } else if (window.size() != 0)
+                         window[window_index].process_key(ui, cmd);
+                       break;
+                     }
+                     case 'Z':
+                     case 'z': {
+                       // 上一个窗口
+                       if (window.size() > 0 &&
+                           window[window_index].get_mode() == Normal) {
+                         if (window_index > 0) window_index--;
+                       } else if (window.size() != 0)
+                         window[window_index].process_key(ui, cmd);
+                       break;
+                     }
+                     case 'X':
+                     case 'x': {
+                       // 下一个窗口
+                       if (window.size() > 0 &&
+                           window[window_index].get_mode() == Normal) {
+                         if (window_index < window.size() - 1) window_index++;
+                       } else if (window.size() != 0)
+                         window[window_index].process_key(ui, cmd);
+                       break;
+                     }
+                     default: {
+                       if (window.size() != 0)
+                         window[window_index].process_key(ui, cmd);
+                       break;
+                     }
+                   }
+                 }
+               })
+        .next();
   };
 }
 termios tm;

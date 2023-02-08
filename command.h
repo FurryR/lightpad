@@ -7,8 +7,8 @@
 #include "./awacorn/awacorn.h"
 #include "./ui.h"
 // argument, EventLoop, UI, Window list, index = success(true) | failed(false)
-typedef std::function<bool(const std::string&, Awacorn::EventLoop*, std::shared_ptr<UI>,
-                           std::shared_ptr<std::vector<TextArea>>, std::shared_ptr<size_t>)>
+typedef std::function<bool(const std::string&, Awacorn::EventLoop*, UI*,
+                           std::vector<TextArea>*, size_t*)>
     Command;
 typedef class Parser {
   std::map<std::string, Command> cmd;
@@ -16,8 +16,8 @@ typedef class Parser {
 
  public:
   Parser() {}
-  bool execute(const std::string& command, Awacorn::EventLoop* ev, const std::shared_ptr<UI>& ui,
-               const std::shared_ptr<std::vector<TextArea>>& window_list, const std::shared_ptr<size_t>& index) const {
+  bool execute(const std::string& command, Awacorn::EventLoop* ev, UI* ui,
+               std::vector<TextArea>* window_list, size_t* index) const {
     size_t idx = command.find_first_of(' ');
     std::string name, arg;
     if (idx == std::string::npos) {
